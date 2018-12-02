@@ -1,0 +1,36 @@
+From 03d661a373389ede382974d98c05e07157d8c51e Mon Sep 17 00:00:00 2001
+From: "Anselmo L. S. Melo" <anselmo.melo@intel.com>
+Date: Fri, 30 Nov 2018 15:56:26 -0800
+Subject: [PATCH] sddm.pam: Update system-login to login
+
+---
+ services/sddm.pam | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/services/sddm.pam b/services/sddm.pam
+index 343650e..f8dfeb3 100755
+--- a/services/sddm.pam
++++ b/services/sddm.pam
+@@ -1,15 +1,15 @@
+ #%PAM-1.0
+ 
+-auth		include		system-login
++auth		include		login
+ -auth		optional	pam_gnome_keyring.so
+ -auth   optional  pam_kwallet5.so
+ 
+-account		include		system-login
++account		include		login
+ 
+-password	include		system-login
++password	include		login
+ -password	optional	pam_gnome_keyring.so use_authtok
+ 
+ session		optional	pam_keyinit.so force revoke
+-session		include		system-login
++session		include		login
+ -session		optional	pam_gnome_keyring.so auto_start
+ -session  optional  pam_kwallet5.so auto_start
+-- 
+2.19.2
+

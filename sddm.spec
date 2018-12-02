@@ -4,22 +4,32 @@
 #
 Name     : sddm
 Version  : 0.18.0
-Release  : 1
+Release  : 2
 URL      : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
+Source1  : sddm.tmpfiles
 Summary  : No detailed summary available
 Group    : Development/Tools
-License  : CC-BY-3.0 CC-BY-SA-3.0 GPL-2.0
-Requires: sddm-bin
-Requires: sddm-config
-Requires: sddm-lib
-Requires: sddm-license
-Requires: sddm-data
+License  : Apache-2.0 CC-BY-3.0 CC-BY-SA-3.0 GPL-2.0
+Requires: sddm-bin = %{version}-%{release}
+Requires: sddm-config = %{version}-%{release}
+Requires: sddm-data = %{version}-%{release}
+Requires: sddm-lib = %{version}-%{release}
+Requires: sddm-libexec = %{version}-%{release}
+Requires: sddm-license = %{version}-%{release}
+Requires: sddm-services = %{version}-%{release}
 BuildRequires : Linux-PAM-dev
 BuildRequires : buildreq-cmake
 BuildRequires : buildreq-kde
+BuildRequires : extra-cmake-modules pkgconfig(xcb) xcb-util-cursor-dev xcb-util-image-dev xcb-util-keysyms-dev xcb-util-renderutil-dev xcb-util-wm-dev xcb-util-dev
+BuildRequires : pkg-config
+BuildRequires : pkgconfig(libsystemd)
 BuildRequires : pkgconfig(systemd)
+BuildRequires : pkgconfig(xcb)
+BuildRequires : pkgconfig(xcb-xkb)
+BuildRequires : qtbase-dev mesa-dev
 Patch1: 0001-Install-the-PAM-config-files-where-Clear-expects-the.patch
+Patch2: 0002-sddm.pam-Update-system-login-to-login.patch
 
 %description
 This theme is part of the Simple Desktop Display Manager distribution. This theme is based QtQuick2.
@@ -27,9 +37,11 @@ This theme is part of the Simple Desktop Display Manager distribution. This them
 %package bin
 Summary: bin components for the sddm package.
 Group: Binaries
-Requires: sddm-data
-Requires: sddm-config
-Requires: sddm-license
+Requires: sddm-data = %{version}-%{release}
+Requires: sddm-libexec = %{version}-%{release}
+Requires: sddm-config = %{version}-%{release}
+Requires: sddm-license = %{version}-%{release}
+Requires: sddm-services = %{version}-%{release}
 
 %description bin
 bin components for the sddm package.
@@ -54,11 +66,22 @@ data components for the sddm package.
 %package lib
 Summary: lib components for the sddm package.
 Group: Libraries
-Requires: sddm-data
-Requires: sddm-license
+Requires: sddm-data = %{version}-%{release}
+Requires: sddm-libexec = %{version}-%{release}
+Requires: sddm-license = %{version}-%{release}
 
 %description lib
 lib components for the sddm package.
+
+
+%package libexec
+Summary: libexec components for the sddm package.
+Group: Default
+Requires: sddm-config = %{version}-%{release}
+Requires: sddm-license = %{version}-%{release}
+
+%description libexec
+libexec components for the sddm package.
 
 
 %package license
@@ -69,33 +92,45 @@ Group: Default
 license components for the sddm package.
 
 
+%package services
+Summary: services components for the sddm package.
+Group: Systemd services
+
+%description services
+services components for the sddm package.
+
+
 %prep
 %setup -q -n sddm-0.18.0
 %patch1 -p1
+%patch2 -p1
 
 %build
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C
-export SOURCE_DATE_EPOCH=1531979504
-mkdir clr-build
+export SOURCE_DATE_EPOCH=1545092626
+mkdir -p clr-build
 pushd clr-build
 %cmake .. -DUID_MIN=1000 -DUID_MAX=60000
-make  %{?_smp_mflags}
+make  %{?_smp_mflags} VERBOSE=1
 popd
 
 %install
-export SOURCE_DATE_EPOCH=1531979504
+export SOURCE_DATE_EPOCH=1545092626
 rm -rf %{buildroot}
-mkdir -p %{buildroot}/usr/share/doc/sddm
-cp LICENSE.CC-BY-3.0 %{buildroot}/usr/share/doc/sddm/LICENSE.CC-BY-3.0
-cp LICENSE %{buildroot}/usr/share/doc/sddm/LICENSE
-cp src/greeter/theme/LICENSE %{buildroot}/usr/share/doc/sddm/src_greeter_theme_LICENSE
-cp data/themes/maldives/LICENSE %{buildroot}/usr/share/doc/sddm/data_themes_maldives_LICENSE
+mkdir -p %{buildroot}/usr/share/package-licenses/sddm
+cp LICENSE %{buildroot}/usr/share/package-licenses/sddm/LICENSE
+cp LICENSE.CC-BY-3.0 %{buildroot}/usr/share/package-licenses/sddm/LICENSE.CC-BY-3.0
+cp data/themes/maldives/LICENSE %{buildroot}/usr/share/package-licenses/sddm/data_themes_maldives_LICENSE
+cp data/themes/maya/LICENSE %{buildroot}/usr/share/package-licenses/sddm/data_themes_maya_LICENSE
+cp src/greeter/theme/LICENSE %{buildroot}/usr/share/package-licenses/sddm/src_greeter_theme_LICENSE
 pushd clr-build
 %make_install
 popd
+mkdir -p %{buildroot}/usr/lib/tmpfiles.d
+install -m 0644 %{SOURCE1} %{buildroot}/usr/lib/tmpfiles.d/sddm.conf
 
 %files
 %defattr(-,root,root,-)
@@ -104,14 +139,14 @@ popd
 %defattr(-,root,root,-)
 /usr/bin/sddm
 /usr/bin/sddm-greeter
-/usr/libexec/sddm-helper
 
 %files config
 %defattr(-,root,root,-)
-/usr/lib/systemd/system/sddm.service
+/usr/lib/tmpfiles.d/sddm.conf
 
 %files data
 %defattr(-,root,root,-)
+/usr/share/dbus-1/system.d/org.freedesktop.DisplayManager.conf
 /usr/share/pam.d/sddm
 /usr/share/pam.d/sddm-autologin
 /usr/share/pam.d/sddm-greeter
@@ -294,9 +329,18 @@ popd
 /usr/lib64/qt5/qml/SddmComponents/qmldir
 /usr/lib64/qt5/qml/SddmComponents/warning.png
 
-%files license
+%files libexec
 %defattr(-,root,root,-)
-/usr/share/doc/sddm/LICENSE
-/usr/share/doc/sddm/LICENSE.CC-BY-3.0
-/usr/share/doc/sddm/data_themes_maldives_LICENSE
-/usr/share/doc/sddm/src_greeter_theme_LICENSE
+/usr/libexec/sddm-helper
+
+%files license
+%defattr(0644,root,root,0755)
+/usr/share/package-licenses/sddm/LICENSE
+/usr/share/package-licenses/sddm/LICENSE.CC-BY-3.0
+/usr/share/package-licenses/sddm/data_themes_maldives_LICENSE
+/usr/share/package-licenses/sddm/data_themes_maya_LICENSE
+/usr/share/package-licenses/sddm/src_greeter_theme_LICENSE
+
+%files services
+%defattr(-,root,root,-)
+/usr/lib/systemd/system/sddm.service
