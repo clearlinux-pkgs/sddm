@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.18.0
-Release  : 2
+Release  : 3
 URL      : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source1  : sddm.tmpfiles
@@ -110,15 +110,15 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C
-export SOURCE_DATE_EPOCH=1545092626
+export SOURCE_DATE_EPOCH=1545274710
 mkdir -p clr-build
 pushd clr-build
-%cmake .. -DUID_MIN=1000 -DUID_MAX=60000
+%cmake .. -DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf
 make  %{?_smp_mflags} VERBOSE=1
 popd
 
 %install
-export SOURCE_DATE_EPOCH=1545092626
+export SOURCE_DATE_EPOCH=1545274710
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp LICENSE %{buildroot}/usr/share/package-licenses/sddm/LICENSE
@@ -146,7 +146,7 @@ install -m 0644 %{SOURCE1} %{buildroot}/usr/lib/tmpfiles.d/sddm.conf
 
 %files data
 %defattr(-,root,root,-)
-/usr/share/dbus-1/system.d/org.freedesktop.DisplayManager.conf
+/usr/share/dbus-1/system.d/sddm_org.fredesktop.DisplayManager.conf
 /usr/share/pam.d/sddm
 /usr/share/pam.d/sddm-autologin
 /usr/share/pam.d/sddm-greeter

@@ -1,1 +1,1 @@
--DUID_MIN=1000 -DUID_MAX=60000
+-DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf
