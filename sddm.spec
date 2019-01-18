@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.18.0
-Release  : 3
+Release  : 4
 URL      : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source1  : sddm.tmpfiles
