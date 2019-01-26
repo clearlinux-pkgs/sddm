@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.18.0
-Release  : 4
+Release  : 5
 URL      : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source1  : sddm.tmpfiles
@@ -33,6 +33,14 @@ Patch2: 0002-sddm.pam-Update-system-login-to-login.patch
 
 %description
 This theme is part of the Simple Desktop Display Manager distribution. This theme is based QtQuick2.
+
+%package autostart
+Summary: autostart components for the sddm package.
+Group: Default
+
+%description autostart
+autostart components for the sddm package.
+
 
 %package bin
 Summary: bin components for the sddm package.
@@ -110,7 +118,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C
-export SOURCE_DATE_EPOCH=1545274710
+export SOURCE_DATE_EPOCH=1548466343
 mkdir -p clr-build
 pushd clr-build
 %cmake .. -DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf
@@ -118,7 +126,7 @@ make  %{?_smp_mflags} VERBOSE=1
 popd
 
 %install
-export SOURCE_DATE_EPOCH=1545274710
+export SOURCE_DATE_EPOCH=1548466343
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp LICENSE %{buildroot}/usr/share/package-licenses/sddm/LICENSE
@@ -131,9 +139,17 @@ pushd clr-build
 popd
 mkdir -p %{buildroot}/usr/lib/tmpfiles.d
 install -m 0644 %{SOURCE1} %{buildroot}/usr/lib/tmpfiles.d/sddm.conf
+## install_append content
+install -D -d -m 00755 %{buildroot}/usr/lib/systemd/system/graphical.target.wants
+ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/sddm.service
+## install_append end
 
 %files
 %defattr(-,root,root,-)
+
+%files autostart
+%defattr(-,root,root,-)
+/usr/lib/systemd/system/graphical.target.wants/sddm.service
 
 %files bin
 %defattr(-,root,root,-)
@@ -343,4 +359,5 @@ install -m 0644 %{SOURCE1} %{buildroot}/usr/lib/tmpfiles.d/sddm.conf
 
 %files services
 %defattr(-,root,root,-)
+%exclude /usr/lib/systemd/system/graphical.target.wants/sddm.service
 /usr/lib/systemd/system/sddm.service

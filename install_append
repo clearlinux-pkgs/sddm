@@ -1,0 +1,2 @@
+install -D -d -m 00755 %{buildroot}/usr/lib/systemd/system/graphical.target.wants
+ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/sddm.service
