@@ -1,0 +1,64 @@
+From f4b70cc7035e6a8cab802e46f46b682420b81bd5 Mon Sep 17 00:00:00 2001
+From: "Anselmo L. S. Melo" <anselmo.melo@intel.com>
+Date: Wed, 23 Jan 2019 17:35:05 -0800
+Subject: [PATCH] Allow cmake to change default theme and InputMethod
+
+sddm already allows build time customization of some of its
+default settings, this patch extends that customization
+to InputMethod and current theme properties.
+Current values are maintained, so it does not break any current
+expected behavior.
+---
+ CMakeLists.txt             | 3 +++
+ src/common/Configuration.h | 4 ++--
+ src/common/Constants.h.in  | 2 ++
+ 3 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 8500c65..4421f03 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -189,6 +189,9 @@ set(LOG_FILE                    "${CMAKE_INSTALL_FULL_LOCALSTATEDIR}/log/sddm.lo
+ set(DBUS_CONFIG_FILENAME        "org.freedesktop.DisplayManager.conf"               CACHE STRING    "Name of the sddm config file")
+ set(COMPONENTS_TRANSLATION_DIR  "${DATA_INSTALL_DIR}/translations"                  CACHE PATH      "Components translations directory")
+ 
++# Default settings
++set(CURRENT_THEME               ""                                                  CACHE STRING    "Default theme")
++set(INPUT_METHOD                "qtvirtualkeyboard"                                 CACHE STRING    "Default input method")
+ 
+ # Autodetect UID_MIN and UID_MAX from /etc/login.defs
+ if(NOT DEFINED LOGIN_DEFS_PATH)
+diff --git a/src/common/Configuration.h b/src/common/Configuration.h
+index 9cb1007..a26ce2c 100644
+--- a/src/common/Configuration.h
++++ b/src/common/Configuration.h
+@@ -42,12 +42,12 @@ namespace SDDM {
+         Entry(Numlock,             NumState,    NUM_NONE,                                       _S("Initial NumLock state. Can be on, off or none.\n"
+                                                                                                    "If property is set to none, numlock won't be changed\n"
+                                                                                                    "NOTE: Currently ignored if autologin is enabled."));
+-        Entry(InputMethod,         QString,     QStringLiteral("qtvirtualkeyboard"),                   _S("Input method module"));
++        Entry(InputMethod,         QString,     _S(INPUT_METHOD),                               _S("Input method module"));
+         Entry(Namespaces,          QStringList, QStringList(),                                  _S("Comma-separated list of Linux namespaces for user session to enter"));
+         //  Name   Entries (but it's a regular class again)
+         Section(Theme,
+             Entry(ThemeDir,            QString,     _S(DATA_INSTALL_DIR "/themes"),             _S("Theme directory path"));
+-            Entry(Current,             QString,     _S(""),                                     _S("Current theme name"));
++            Entry(Current,             QString,     _S(CURRENT_THEME),                          _S("Current theme name"));
+             Entry(FacesDir,            QString,     _S(DATA_INSTALL_DIR "/faces"),              _S("Global directory for user avatars\n"
+                                                                                                    "The files should be named <username>.face.icon"));
+             Entry(CursorTheme,         QString,     QString(),                                  _S("Cursor theme used in the greeter"));
+diff --git a/src/common/Constants.h.in b/src/common/Constants.h.in
+index 7500a49..987f5ba 100644
+--- a/src/common/Constants.h.in
++++ b/src/common/Constants.h.in
+@@ -44,5 +44,7 @@
+ 
+ #define HALT_COMMAND "@HALT_COMMAND@"
+ #define REBOOT_COMMAND "@REBOOT_COMMAND@"
++#define INPUT_METHOD "@INPUT_METHOD@"
++#define CURRENT_THEME "@CURRENT_THEME@"
+ 
+ #endif // SDDM_CONSTANTS_H
+-- 
+2.20.1
+

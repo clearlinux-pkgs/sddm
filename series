@@ -1,2 +1,3 @@
 0001-Install-the-PAM-config-files-where-Clear-expects-the.patch
 0002-sddm.pam-Update-system-login-to-login.patch
+0003-Allow-cmake-to-change-default-theme-and-InputMethod.patch
