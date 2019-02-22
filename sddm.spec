@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.18.0
-Release  : 6
+Release  : 7
 URL      : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.18.0/sddm-0.18.0.tar.gz
 Source1  : sddm.tmpfiles
@@ -31,6 +31,8 @@ BuildRequires : qtbase-dev mesa-dev
 Patch1: 0001-Install-the-PAM-config-files-where-Clear-expects-the.patch
 Patch2: 0002-sddm.pam-Update-system-login-to-login.patch
 Patch3: 0003-Allow-cmake-to-change-default-theme-and-InputMethod.patch
+Patch4: 0004-Stateless-Make-session-scripts-usr-share-defaults-et.patch
+Patch5: 0005-autologin.pam-Use-login-instead-of-system-login.patch
 
 %description
 This theme is part of the Simple Desktop Display Manager distribution. This theme is based QtQuick2.
@@ -114,21 +116,24 @@ services components for the sddm package.
 %patch1 -p1
 %patch2 -p1
 %patch3 -p1
+%patch4 -p1
+%patch5 -p1
 
 %build
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C
-export SOURCE_DATE_EPOCH=1548466690
+export SOURCE_DATE_EPOCH=1550808576
 mkdir -p clr-build
 pushd clr-build
+export LDFLAGS="${LDFLAGS} -fno-lto"
 %cmake .. -DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf -DCURRENT_THEME=breeze -DINPUT_METHOD=""
 make  %{?_smp_mflags} VERBOSE=1
 popd
 
 %install
-export SOURCE_DATE_EPOCH=1548466690
+export SOURCE_DATE_EPOCH=1550808576
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp LICENSE %{buildroot}/usr/share/package-licenses/sddm/LICENSE
