@@ -1,0 +1,28 @@
+From d5563c207d47bdc4526897640a6f5e1bcaaf44d5 Mon Sep 17 00:00:00 2001
+From: "Anselmo L. S. Melo" <anselmo.melo@intel.com>
+Date: Thu, 21 Feb 2019 20:00:40 -0800
+Subject: [PATCH] autologin.pam: Use login instead of system-login
+
+---
+ services/sddm-autologin.pam | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/services/sddm-autologin.pam b/services/sddm-autologin.pam
+index 4c82048..b61e4c4 100755
+--- a/services/sddm-autologin.pam
++++ b/services/sddm-autologin.pam
+@@ -6,8 +6,8 @@ auth        required    pam_nologin.so
+ auth        required    pam_permit.so
+ -auth       optional    pam_gnome_keyring.so
+ -auth       optional    pam_kwallet5.so
+-account     include     system-local-login
+-password    include     system-local-login
+-session     include     system-local-login
++account     include     login
++password    include     login
++session     include     login
+ -session    optional    pam_gnome_keyring.so auto_start
+ -session    optional    pam_kwallet5.so auto_start
+-- 
+2.20.1
+
