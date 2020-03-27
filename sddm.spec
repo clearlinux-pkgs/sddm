@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.18.1
-Release  : 8
+Release  : 9
 URL      : https://github.com/sddm/sddm/releases/download/v0.18.1/sddm-0.18.1.tar.xz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.18.1/sddm-0.18.1.tar.xz
 Source1  : sddm.tmpfiles
