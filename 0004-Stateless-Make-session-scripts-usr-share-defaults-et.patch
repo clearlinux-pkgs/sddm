@@ -1,16 +1,16 @@
-From 5c948dcb18317eda0d1f2410abf8b3d4c53e1691 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: "Anselmo L. S. Melo" <anselmo.melo@intel.com>
 Date: Sat, 16 Feb 2019 21:42:47 -0800
 Subject: [PATCH] Stateless: Make session scripts
  /usr/share/defaults/etc/profile
 
 ---
- data/scripts/Xsession        | 4 ++++
- data/scripts/wayland-session | 4 ++++
- 2 files changed, 8 insertions(+)
+ data/scripts/Xsession        | 3 +++
+ data/scripts/wayland-session | 3 +++
+ 2 files changed, 6 insertions(+)
 
 diff --git a/data/scripts/Xsession b/data/scripts/Xsession
-index c7fa214..2981c87 100755
+index 5449810..dff9dde 100755
 --- a/data/scripts/Xsession
 +++ b/data/scripts/Xsession
 @@ -10,6 +10,7 @@ case $SHELL in
@@ -29,15 +29,7 @@ index c7fa214..2981c87 100755
      [ -d /etc/zsh ] && zdir=/etc/zsh || zdir=/etc
      zhome=${ZDOTDIR:-$HOME}
      # zshenv is always sourced automatically.
-@@ -39,6 +41,7 @@ case $SHELL in
-     rm -f $xsess_tmp
-     ;;
-   */fish)
-+    [ -f /usr/share/defaults/etc/profile ] && . /usr/share/defaults/etc/profile
-     [ -f /etc/profile ] && . /etc/profile
-     xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
-     $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
-@@ -46,6 +49,7 @@ case $SHELL in
+@@ -45,6 +47,7 @@ case $SHELL in
      rm -f $xsess_tmp
      ;;
    *) # Plain sh, ksh, and anything we do not know.
@@ -46,7 +38,7 @@ index c7fa214..2981c87 100755
      [ -f $HOME/.profile ] && . $HOME/.profile
      ;;
 diff --git a/data/scripts/wayland-session b/data/scripts/wayland-session
-index 42be624..4dc89cf 100755
+index de4f519..073b04c 100755
 --- a/data/scripts/wayland-session
 +++ b/data/scripts/wayland-session
 @@ -10,6 +10,7 @@ case $SHELL in
@@ -65,15 +57,7 @@ index 42be624..4dc89cf 100755
      [ -d /etc/zsh ] && zdir=/etc/zsh || zdir=/etc
      zhome=${ZDOTDIR:-$HOME}
      # zshenv is always sourced automatically.
-@@ -39,6 +41,7 @@ case $SHELL in
-     rm -f $wlsess_tmp
-     ;;
-   */fish)
-+    [ -f /usr/share/defaults/etc/profile ] && . /usr/share/defaults/etc/profile
-     [ -f /etc/profile ] && . /etc/profile
-     xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
-     $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
-@@ -46,6 +49,7 @@ case $SHELL in
+@@ -45,6 +47,7 @@ case $SHELL in
      rm -f $xsess_tmp
      ;;
    *) # Plain sh, ksh, and anything we do not know.
@@ -81,6 +65,3 @@ index 42be624..4dc89cf 100755
      [ -f /etc/profile ] && . /etc/profile
      [ -f $HOME/.profile ] && . $HOME/.profile
      ;;
--- 
-2.20.1
-

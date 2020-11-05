@@ -1,4 +1,4 @@
-From f4b70cc7035e6a8cab802e46f46b682420b81bd5 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: "Anselmo L. S. Melo" <anselmo.melo@intel.com>
 Date: Wed, 23 Jan 2019 17:35:05 -0800
 Subject: [PATCH] Allow cmake to change default theme and InputMethod
@@ -15,10 +15,10 @@ expected behavior.
  3 files changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8500c65..4421f03 100644
+index e52e0e9..38b708b 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -189,6 +189,9 @@ set(LOG_FILE                    "${CMAKE_INSTALL_FULL_LOCALSTATEDIR}/log/sddm.lo
+@@ -198,6 +198,9 @@ set(LOG_FILE                    "${CMAKE_INSTALL_FULL_LOCALSTATEDIR}/log/sddm.lo
  set(DBUS_CONFIG_FILENAME        "org.freedesktop.DisplayManager.conf"               CACHE STRING    "Name of the sddm config file")
  set(COMPONENTS_TRANSLATION_DIR  "${DATA_INSTALL_DIR}/translations"                  CACHE PATH      "Components translations directory")
  
@@ -29,7 +29,7 @@ index 8500c65..4421f03 100644
  # Autodetect UID_MIN and UID_MAX from /etc/login.defs
  if(NOT DEFINED LOGIN_DEFS_PATH)
 diff --git a/src/common/Configuration.h b/src/common/Configuration.h
-index 9cb1007..a26ce2c 100644
+index cf44a62..77e3cb6 100644
 --- a/src/common/Configuration.h
 +++ b/src/common/Configuration.h
 @@ -42,12 +42,12 @@ namespace SDDM {
@@ -48,7 +48,7 @@ index 9cb1007..a26ce2c 100644
                                                                                                     "The files should be named <username>.face.icon"));
              Entry(CursorTheme,         QString,     QString(),                                  _S("Cursor theme used in the greeter"));
 diff --git a/src/common/Constants.h.in b/src/common/Constants.h.in
-index 7500a49..987f5ba 100644
+index e174b5b..ce58d09 100644
 --- a/src/common/Constants.h.in
 +++ b/src/common/Constants.h.in
 @@ -44,5 +44,7 @@
@@ -59,6 +59,3 @@ index 7500a49..987f5ba 100644
 +#define CURRENT_THEME "@CURRENT_THEME@"
  
  #endif // SDDM_CONSTANTS_H
--- 
-2.20.1
-

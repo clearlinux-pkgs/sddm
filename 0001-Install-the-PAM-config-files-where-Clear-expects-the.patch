@@ -1,4 +1,4 @@
-From 5d2a0b509122e4fb5be08d63d141d1a867c93267 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Thiago Macieira <thiago.macieira@intel.com>
 Date: Wed, 18 Jul 2018 22:48:28 -0700
 Subject: [PATCH] Install the PAM config files where Clear expects them to be
@@ -22,6 +22,3 @@ index fbf7608..9bcdb27 100644
 +install(FILES sddm.pam DESTINATION /usr/share/pam.d RENAME sddm)
 +install(FILES sddm-autologin.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
 +install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION /usr/share/pam.d RENAME sddm-greeter)
--- 
-2.18.0
-

@@ -1,5 +1,5 @@
 PKG_NAME := sddm
-URL = https://github.com/sddm/sddm/releases/download/v0.18.1/sddm-0.18.1.tar.xz
+URL = https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 ARCHIVES = 
 
 include ../common/Makefile.common
