@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.19.0
-Release  : 11
+Release  : 12
 URL      : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source1  : sddm.tmpfiles
@@ -29,11 +29,10 @@ BuildRequires : pkgconfig(systemd)
 BuildRequires : pkgconfig(xcb)
 BuildRequires : pkgconfig(xcb-xkb)
 BuildRequires : qtbase-dev mesa-dev
-Patch1: 0001-Install-the-PAM-config-files-where-Clear-expects-the.patch
-Patch2: 0002-sddm.pam-Update-system-login-to-login.patch
-Patch3: 0003-Allow-cmake-to-change-default-theme-and-InputMethod.patch
-Patch4: 0004-Stateless-Make-session-scripts-usr-share-defaults-et.patch
-Patch5: 0005-autologin.pam-Use-login-instead-of-system-login.patch
+Patch1: update-from-git.patch
+Patch2: 0001-Install-the-PAM-config-files-where-Clear-expects-the.patch
+Patch3: 0002-sddm.pam-Update-system-login-to-login.patch
+Patch4: 0005-autologin.pam-Use-login-instead-of-system-login.patch
 
 %description
 These are the default avatars.
@@ -120,14 +119,13 @@ cd %{_builddir}/sddm-0.19.0
 %patch2 -p1
 %patch3 -p1
 %patch4 -p1
-%patch5 -p1
 
 %build
 export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1642604744
+export SOURCE_DATE_EPOCH=1642606593
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
@@ -147,7 +145,7 @@ export no_proxy=localhost,127.0.0.1,0.0.0.0
 cd clr-build; make test
 
 %install
-export SOURCE_DATE_EPOCH=1642604744
+export SOURCE_DATE_EPOCH=1642606593
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp %{_builddir}/sddm-0.19.0/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa
@@ -194,6 +192,7 @@ ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.want
 /usr/share/sddm/flags/ar.png
 /usr/share/sddm/flags/at.png
 /usr/share/sddm/flags/az.png
+/usr/share/sddm/flags/bd.png
 /usr/share/sddm/flags/be.png
 /usr/share/sddm/flags/bg.png
 /usr/share/sddm/flags/bh.png
@@ -371,6 +370,8 @@ ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.want
 %files libexec
 %defattr(-,root,root,-)
 /usr/libexec/sddm-helper
+/usr/libexec/sddm-helper-start-wayland
+/usr/libexec/sddm-helper-start-x11user
 
 %files license
 %defattr(0644,root,root,0755)

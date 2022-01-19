@@ -1,24 +1,26 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
-From: Thiago Macieira <thiago.macieira@intel.com>
-Date: Wed, 18 Jul 2018 22:48:28 -0700
-Subject: [PATCH] Install the PAM config files where Clear expects them to be
-
-Signed-off-by: Thiago Macieira <thiago.macieira@intel.com>
----
- services/CMakeLists.txt | 6 +++---
- 1 file changed, 3 insertions(+), 3 deletions(-)
-
-diff --git a/services/CMakeLists.txt b/services/CMakeLists.txt
-index fbf7608..9bcdb27 100644
---- a/services/CMakeLists.txt
-+++ b/services/CMakeLists.txt
-@@ -10,6 +10,6 @@ else()
- endif()
+--- sddm-0.19.0/services/CMakeLists.txt~	2022-01-19 15:26:03.000000000 +0000
++++ sddm-0.19.0/services/CMakeLists.txt	2022-01-19 15:26:56.010809938 +0000
+@@ -12,16 +12,16 @@
  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/sddm-greeter.pam.in" "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam")
  
--install(FILES sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
--install(FILES sddm-autologin.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
--install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-greeter)
-+install(FILES sddm.pam DESTINATION /usr/share/pam.d RENAME sddm)
-+install(FILES sddm-autologin.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
-+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION /usr/share/pam.d RENAME sddm-greeter)
+ if(EXISTS "/etc/debian_version")
+-    install(FILES debian.sddm-autologin.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
+-    install(FILES debian.sddm-greeter.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-greeter)
+-    install(FILES debian.sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
++    install(FILES debian.sddm-autologin.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
++    install(FILES debian.sddm-greeter.pam DESTINATION /usr/share/pam.d RENAME sddm-greeter)
++    install(FILES debian.sddm.pam DESTINATION /usr/share/pam.d RENAME sddm)
+ else()
+     if(HAVE_PAM_FAILLOCK)
+-        install(FILES sddm-autologin.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
++        install(FILES sddm-autologin.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
+     else()
+-        install(FILES sddm-autologin-tally2.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
++        install(FILES sddm-autologin-tally2.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
+     endif()
+ 
+-    install(FILES sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
+-    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-greeter)
++    install(FILES sddm.pam DESTINATION /usr/share/pam.d RENAME sddm)
++    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION /usr/share/pam.d RENAME sddm-greeter)
+ endif()
