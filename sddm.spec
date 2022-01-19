@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.19.0
-Release  : 12
+Release  : 13
 URL      : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source1  : sddm.tmpfiles
@@ -14,6 +14,7 @@ License  : Apache-2.0 CC-BY-3.0 CC-BY-SA-3.0 GPL-2.0
 Requires: sddm-bin = %{version}-%{release}
 Requires: sddm-config = %{version}-%{release}
 Requires: sddm-data = %{version}-%{release}
+Requires: sddm-filemap = %{version}-%{release}
 Requires: sddm-lib = %{version}-%{release}
 Requires: sddm-libexec = %{version}-%{release}
 Requires: sddm-license = %{version}-%{release}
@@ -54,6 +55,7 @@ Requires: sddm-libexec = %{version}-%{release}
 Requires: sddm-config = %{version}-%{release}
 Requires: sddm-license = %{version}-%{release}
 Requires: sddm-services = %{version}-%{release}
+Requires: sddm-filemap = %{version}-%{release}
 
 %description bin
 bin components for the sddm package.
@@ -75,12 +77,21 @@ Group: Data
 data components for the sddm package.
 
 
+%package filemap
+Summary: filemap components for the sddm package.
+Group: Default
+
+%description filemap
+filemap components for the sddm package.
+
+
 %package lib
 Summary: lib components for the sddm package.
 Group: Libraries
 Requires: sddm-data = %{version}-%{release}
 Requires: sddm-libexec = %{version}-%{release}
 Requires: sddm-license = %{version}-%{release}
+Requires: sddm-filemap = %{version}-%{release}
 
 %description lib
 lib components for the sddm package.
@@ -91,6 +102,7 @@ Summary: libexec components for the sddm package.
 Group: Default
 Requires: sddm-config = %{version}-%{release}
 Requires: sddm-license = %{version}-%{release}
+Requires: sddm-filemap = %{version}-%{release}
 
 %description libexec
 libexec components for the sddm package.
@@ -125,7 +137,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1642606593
+export SOURCE_DATE_EPOCH=1642606788
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
@@ -136,6 +148,20 @@ export CXXFLAGS="$CXXFLAGS -fno-lto "
 %cmake .. -DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf -DCURRENT_THEME=breeze -DINPUT_METHOD=""
 make  %{?_smp_mflags}
 popd
+mkdir -p clr-build-avx2
+pushd clr-build-avx2
+export GCC_IGNORE_WERROR=1
+export CFLAGS="$CFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -mtune=skylake "
+export FCFLAGS="$FFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -mtune=skylake "
+export FFLAGS="$FFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -mtune=skylake "
+export CXXFLAGS="$CXXFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -mtune=skylake "
+export CFLAGS="$CFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
+export CXXFLAGS="$CXXFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
+export FFLAGS="$FFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
+export FCFLAGS="$FCFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
+%cmake .. -DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf -DCURRENT_THEME=breeze -DINPUT_METHOD=""
+make  %{?_smp_mflags}
+popd
 
 %check
 export LANG=C.UTF-8
@@ -143,9 +169,11 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 cd clr-build; make test
+cd ../clr-build-avx2;
+make test || :
 
 %install
-export SOURCE_DATE_EPOCH=1642606593
+export SOURCE_DATE_EPOCH=1642606788
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp %{_builddir}/sddm-0.19.0/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa
@@ -153,6 +181,9 @@ cp %{_builddir}/sddm-0.19.0/LICENSE.CC-BY-3.0 %{buildroot}/usr/share/package-lic
 cp %{_builddir}/sddm-0.19.0/data/themes/maldives/LICENSE %{buildroot}/usr/share/package-licenses/sddm/e8d1d9f327264e4e4c788885c5a4213ec45fc72c
 cp %{_builddir}/sddm-0.19.0/data/themes/maya/LICENSE %{buildroot}/usr/share/package-licenses/sddm/da522752b1c6d5156fc27a3e3d3874713b5aff7f
 cp %{_builddir}/sddm-0.19.0/src/greeter/theme/LICENSE %{buildroot}/usr/share/package-licenses/sddm/e8d1d9f327264e4e4c788885c5a4213ec45fc72c
+pushd clr-build-avx2
+%make_install_v3  || :
+popd
 pushd clr-build
 %make_install
 popd
@@ -162,6 +193,7 @@ install -m 0644 %{SOURCE1} %{buildroot}/usr/lib/tmpfiles.d/sddm.conf
 install -D -d -m 00755 %{buildroot}/usr/lib/systemd/system/graphical.target.wants
 ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.wants/sddm.service
 ## install_append end
+/usr/bin/elf-move.py avx2 %{buildroot}-v3 %{buildroot}/usr/share/clear/optimized-elf/ %{buildroot}/usr/share/clear/filemap/filemap-%{name}
 
 %files
 %defattr(-,root,root,-)
@@ -174,6 +206,7 @@ ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.want
 %defattr(-,root,root,-)
 /usr/bin/sddm
 /usr/bin/sddm-greeter
+/usr/share/clear/optimized-elf/bin*
 
 %files config
 %defattr(-,root,root,-)
@@ -351,6 +384,10 @@ ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.want
 /usr/share/sddm/translations/zh_CN.qm
 /usr/share/sddm/translations/zh_TW.qm
 
+%files filemap
+%defattr(-,root,root,-)
+/usr/share/clear/filemap/filemap-sddm
+
 %files lib
 %defattr(-,root,root,-)
 /usr/lib64/qt5/qml/SddmComponents/Background.qml
@@ -372,6 +409,7 @@ ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.want
 /usr/libexec/sddm-helper
 /usr/libexec/sddm-helper-start-wayland
 /usr/libexec/sddm-helper-start-x11user
+/usr/share/clear/optimized-elf/exec*
 
 %files license
 %defattr(0644,root,root,0755)
