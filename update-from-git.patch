@@ -2883,7 +2883,7 @@ index e68bc12..b4a1bf8 100644
  
      private slots:
 diff --git a/src/daemon/Greeter.cpp b/src/daemon/Greeter.cpp
-index 878576b..f7058f4 100644
+index 878576b..0d36667 100644
 --- a/src/daemon/Greeter.cpp
 +++ b/src/daemon/Greeter.cpp
 @@ -27,12 +27,17 @@
@@ -3091,7 +3091,7 @@ index 878576b..f7058f4 100644
 +
 +    bool Greeter::isRunning() const {
 +        return (m_process && m_process->state() == QProcess::Running)
-+            || (m_auth->isActive());
++            || (m_auth && m_auth->isActive());
      }
  
      void Greeter::onReadyReadStandardError()
