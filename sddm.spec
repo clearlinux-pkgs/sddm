@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.19.0
-Release  : 21
+Release  : 22
 URL      : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source1  : sddm.tmpfiles
@@ -137,7 +137,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1657300686
+export SOURCE_DATE_EPOCH=1663026805
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
@@ -173,14 +173,14 @@ cd ../clr-build-avx2;
 make test || :
 
 %install
-export SOURCE_DATE_EPOCH=1657300686
+export SOURCE_DATE_EPOCH=1663026805
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
-cp %{_builddir}/sddm-0.19.0/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa
-cp %{_builddir}/sddm-0.19.0/LICENSE.CC-BY-3.0 %{buildroot}/usr/share/package-licenses/sddm/6996014a32f1f59ce60e5e1db18c8548f124eb4f
-cp %{_builddir}/sddm-0.19.0/data/themes/maldives/LICENSE %{buildroot}/usr/share/package-licenses/sddm/e8d1d9f327264e4e4c788885c5a4213ec45fc72c
-cp %{_builddir}/sddm-0.19.0/data/themes/maya/LICENSE %{buildroot}/usr/share/package-licenses/sddm/da522752b1c6d5156fc27a3e3d3874713b5aff7f
-cp %{_builddir}/sddm-0.19.0/src/greeter/theme/LICENSE %{buildroot}/usr/share/package-licenses/sddm/e8d1d9f327264e4e4c788885c5a4213ec45fc72c
+cp %{_builddir}/sddm-%{version}/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa || :
+cp %{_builddir}/sddm-%{version}/LICENSE.CC-BY-3.0 %{buildroot}/usr/share/package-licenses/sddm/6996014a32f1f59ce60e5e1db18c8548f124eb4f || :
+cp %{_builddir}/sddm-%{version}/data/themes/maldives/LICENSE %{buildroot}/usr/share/package-licenses/sddm/e8d1d9f327264e4e4c788885c5a4213ec45fc72c || :
+cp %{_builddir}/sddm-%{version}/data/themes/maya/LICENSE %{buildroot}/usr/share/package-licenses/sddm/da522752b1c6d5156fc27a3e3d3874713b5aff7f || :
+cp %{_builddir}/sddm-%{version}/src/greeter/theme/LICENSE %{buildroot}/usr/share/package-licenses/sddm/e8d1d9f327264e4e4c788885c5a4213ec45fc72c || :
 pushd clr-build-avx2
 %make_install_v3  || :
 popd
@@ -360,6 +360,7 @@ ln -sv ../sddm.service %{buildroot}/usr/lib/systemd/system/graphical.target.want
 /usr/share/sddm/translations/is.qm
 /usr/share/sddm/translations/it.qm
 /usr/share/sddm/translations/ja.qm
+/usr/share/sddm/translations/ka.qm
 /usr/share/sddm/translations/kk.qm
 /usr/share/sddm/translations/ko.qm
 /usr/share/sddm/translations/lt.qm
