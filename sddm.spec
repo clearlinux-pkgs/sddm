@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.19.0
-Release  : 22
+Release  : 23
 URL      : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source1  : sddm.tmpfiles
@@ -137,7 +137,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1663026805
+export SOURCE_DATE_EPOCH=1663083119
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
@@ -173,7 +173,7 @@ cd ../clr-build-avx2;
 make test || :
 
 %install
-export SOURCE_DATE_EPOCH=1663026805
+export SOURCE_DATE_EPOCH=1663083119
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp %{_builddir}/sddm-%{version}/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa || :

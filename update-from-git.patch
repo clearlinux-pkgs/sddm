@@ -63,10 +63,17 @@ index ff2a68d..64ed544 100644
  ## 0.18.0 - 2018-07-17
  ----------------------
 diff --git a/README.md b/README.md
-index 7c7a555..9c2f7d3 100644
+index 7c7a555..753806f 100644
 --- a/README.md
 +++ b/README.md
-@@ -17,9 +17,6 @@ a combox etc.
+@@ -1,6 +1,5 @@
+ ## INTRODUCTION
+ 
+-[![Build Status](https://travis-ci.org/sddm/sddm.svg?branch=master)](https://travis-ci.org/sddm/sddm)
+ [![IRC Network](https://img.shields.io/badge/irc-freenode-blue.svg "IRC Freenode")](https://webchat.freenode.net/?channels=sddm)
+ 
+ SDDM is a modern display manager for X11 and Wayland aiming to be fast, simple and beautiful.
+@@ -17,9 +16,6 @@ a combox etc.
  There are a few sample themes distributed with SDDM.
  They can be used as a starting point for new themes.
  
@@ -76,7 +83,7 @@ index 7c7a555..9c2f7d3 100644
  ## SCREENSHOTS
  
  ![sample screenshot](https://raw.github.com/sddm/sddm/master/src/greeter/theme/maui.jpg)
-@@ -39,7 +36,7 @@ money that can be used to support the features that you most desire.
+@@ -39,7 +35,7 @@ money that can be used to support the features that you most desire.
  
  ## INSTALLATION
  
