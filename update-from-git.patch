@@ -1,5 +1,68 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index 4fa42f0..c7e93a3 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -21,21 +21,19 @@ jobs:
+         compiler:
+           - gcc
+           - clang
+-        container:
+-          #- suse-qt512
+-          - suse-qt515
+         pam:
+           - ON
+           - OFF
+-    runs-on: ubuntu-latest
+-    container:
+-      image: liridev/${{ matrix.container }}
++    runs-on: ubuntu-22.04
+     steps:
+-      - uses: actions/checkout@v2
++      - uses: actions/checkout@v3
+       - name: Dependencies
+         run: |
+           set -x
+-          zypper --non-interactive install python3-docutils
++          sudo sed -i '/^#\sdeb-src /s/^#//' "/etc/apt/sources.list"
++          sudo apt-get update -y
++          DEBIAN_FRONTEND=noninteractive sudo apt-get build-dep sddm -y
++          DEBIAN_FRONTEND=noninteractive sudo apt-get install clang clazy sudo -y
+       - name: Build
+         run: |
+           set -x
+@@ -48,7 +46,6 @@ jobs:
+           fi
+           cmake .. \
+             -DBUILD_MAN_PAGES:BOOL=ON \
+-            -DENABLE_PAM:BOOL=${{ matrix.pam }} \
+-            -DLOGIN_DEFS_PATH:path="/usr/etc/login.defs"
++            -DENABLE_PAM:BOOL=${{ matrix.pam }}
+           make -j $(getconf _NPROCESSORS_ONLN)
+           sudo make install
+diff --git a/.github/workflows/checks.yml b/.github/workflows/checks.yml
+index 5d70019..0fd57c2 100644
+--- a/.github/workflows/checks.yml
++++ b/.github/workflows/checks.yml
+@@ -29,7 +29,7 @@ jobs:
+     if: "!contains(github.event.head_commit.message, 'ci skip')"
+     runs-on: ubuntu-latest
+     steps:
+-      - uses: actions/checkout@v2
++      - uses: actions/checkout@v3
+         with:
+           fetch-depth: 1
+       - name: Validate XDG files
+@@ -40,7 +40,7 @@ jobs:
+     if: "!contains(github.event.head_commit.message, 'ci skip')"
+     runs-on: ubuntu-latest
+     steps:
+-      - uses: actions/checkout@v2
++      - uses: actions/checkout@v3
+         with:
+           fetch-depth: 1
+       - name: Validate QML and JavaScript files
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e52e0e9..6936b31 100644
+index e52e0e9..7262796 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -16,6 +16,7 @@ set(SDDM_VERSION_MAJOR 0)
@@ -10,7 +73,17 @@ index e52e0e9..6936b31 100644
  
  # Set up packaging
  set(CPACK_PACKAGE_NAME "sddm")
-@@ -95,7 +96,7 @@ find_package(XCB REQUIRED)
+@@ -34,6 +35,9 @@ option(ENABLE_PAM "Enable PAM support" ON)
+ option(NO_SYSTEMD "Disable systemd support" OFF)
+ option(USE_ELOGIND "Use elogind instead of logind" OFF)
+ 
++set(CMAKE_CXX_STANDARD 17)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++
+ # ECM
+ find_package(ECM 1.4.0 REQUIRED NO_MODULE)
+ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH};${ECM_MODULE_PATH}")
+@@ -95,7 +99,7 @@ find_package(XCB REQUIRED)
  find_package(XKB REQUIRED)
  
  # Qt 5
@@ -19,7 +92,7 @@ index e52e0e9..6936b31 100644
  
  # find qt5 imports dir
  get_target_property(QMAKE_EXECUTABLE Qt5::qmake LOCATION)
-@@ -141,7 +142,6 @@ if(SYSTEMD_FOUND)
+@@ -141,7 +145,6 @@ if(SYSTEMD_FOUND)
          string(REGEX REPLACE "[ \t\n]+" "" SYSTEMD_SYSTEM_UNIT_DIR ${SYSTEMD_SYSTEM_UNIT_DIR})
      endif()
  
@@ -27,7 +100,7 @@ index e52e0e9..6936b31 100644
      set(HALT_COMMAND "/usr/bin/systemctl poweroff")
      set(REBOOT_COMMAND "/usr/bin/systemctl reboot")
  else()
-@@ -159,7 +159,6 @@ if(ELOGIND_FOUND)
+@@ -159,7 +162,6 @@ if(ELOGIND_FOUND)
      add_definitions(-DHAVE_ELOGIND)
      set(CMAKE_AUTOMOC_MOC_OPTIONS -DHAVE_ELOGIND)
  
@@ -35,7 +108,7 @@ index e52e0e9..6936b31 100644
      set(HALT_COMMAND "/usr/bin/loginctl poweroff")
      set(REBOOT_COMMAND "/usr/bin/loginctl reboot")
  endif()
-@@ -171,10 +170,8 @@ if (NOT ELOGIND_FOUND AND NOT SYSTEMD_FOUND)
+@@ -171,10 +173,8 @@ if (NOT ELOGIND_FOUND AND NOT SYSTEMD_FOUND)
      # commands for shutdown and reboot. On FreeBSD, there are
      # normally more getty's running than on Linux.
      if("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
@@ -108,6 +181,86 @@ diff --git a/data/flags/bd.png b/data/flags/bd.png
 new file mode 100644
 index 0000000..b516bb7
 Binary files /dev/null and b/data/flags/bd.png differ
+diff --git a/data/interfaces/org.freedesktop.locale1.xml b/data/interfaces/org.freedesktop.locale1.xml
+new file mode 100644
+index 0000000..037e2a8
+--- /dev/null
++++ b/data/interfaces/org.freedesktop.locale1.xml
+@@ -0,0 +1,74 @@
++<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"
++"http://www.freedesktop.org/standards/dbus/1.0/introspect.dtd">
++<node>
++ <interface name="org.freedesktop.DBus.Peer">
++  <method name="Ping"/>
++  <method name="GetMachineId">
++   <arg type="s" name="machine_uuid" direction="out"/>
++  </method>
++ </interface>
++ <interface name="org.freedesktop.DBus.Introspectable">
++  <method name="Introspect">
++   <arg name="xml_data" type="s" direction="out"/>
++  </method>
++ </interface>
++ <interface name="org.freedesktop.DBus.Properties">
++  <method name="Get">
++   <arg name="interface_name" direction="in" type="s"/>
++   <arg name="property_name" direction="in" type="s"/>
++   <arg name="value" direction="out" type="v"/>
++  </method>
++  <method name="GetAll">
++   <arg name="interface_name" direction="in" type="s"/>
++   <arg name="props" direction="out" type="a{sv}"/>
++   <annotation name="org.qtproject.QtDBus.QtTypeName.Out0" value="QVariantMap" />
++  </method>
++  <method name="Set">
++   <arg name="interface_name" direction="in" type="s"/>
++   <arg name="property_name" direction="in" type="s"/>
++   <arg name="value" direction="in" type="v"/>
++  </method>
++  <signal name="PropertiesChanged">
++   <arg type="s" name="interface_name"/>
++   <arg type="a{sv}" name="changed_properties"/>
++   <annotation name="org.qtproject.QtDBus.QtTypeName.Out1" value="QVariantMap" />
++   <arg type="as" name="invalidated_properties"/>
++  </signal>
++ </interface>
++
++
++ <interface name="org.freedesktop.locale1">
++  <property name="Locale" type="as" access="read">
++  </property>
++  <property name="X11Layout" type="s" access="read">
++  </property>
++  <property name="X11Model" type="s" access="read">
++  </property>
++  <property name="X11Variant" type="s" access="read">
++  </property>
++  <property name="X11Options" type="s" access="read">
++  </property>
++  <property name="VConsoleKeymap" type="s" access="read">
++  </property>
++  <property name="VConsoleKeymapToggle" type="s" access="read">
++  </property>
++  <method name="SetLocale">
++   <arg type="as" name="locale" direction="in"/>
++   <arg type="b" name="interactive" direction="in"/>
++  </method>
++  <method name="SetVConsoleKeyboard">
++   <arg type="s" name="keymap" direction="in"/>
++   <arg type="s" name="keymap_toggle" direction="in"/>
++   <arg type="b" name="convert" direction="in"/>
++   <arg type="b" name="interactive" direction="in"/>
++  </method>
++  <method name="SetX11Keyboard">
++   <arg type="s" name="layout" direction="in"/>
++   <arg type="s" name="model" direction="in"/>
++   <arg type="s" name="variant" direction="in"/>
++   <arg type="s" name="options" direction="in"/>
++   <arg type="b" name="convert" direction="in"/>
++   <arg type="b" name="interactive" direction="in"/>
++  </method>
++ </interface>
++</node>
 diff --git a/data/man/sddm.conf.rst.in b/data/man/sddm.conf.rst.in
 index bee0768..48395b2 100644
 --- a/data/man/sddm.conf.rst.in
@@ -1714,7 +1867,7 @@ index 0000000..de7fd79
 +# Load environment from /etc/default/locale and ~/.pam_environment
 +session required        pam_env.so envfile=/etc/default/locale user_readenv=1
 diff --git a/services/sddm-autologin-tally2.pam b/services/sddm-autologin-tally2.pam
-new file mode 100755
+new file mode 100644
 index 0000000..99729bc
 --- /dev/null
 +++ b/services/sddm-autologin-tally2.pam
@@ -1733,7 +1886,9 @@ index 0000000..99729bc
 +-session    optional    pam_gnome_keyring.so auto_start
 +-session    optional    pam_kwallet5.so auto_start
 diff --git a/services/sddm-autologin.pam b/services/sddm-autologin.pam
-index 99729bc..b42991e 100755
+old mode 100755
+new mode 100644
+index 99729bc..b42991e
 --- a/services/sddm-autologin.pam
 +++ b/services/sddm-autologin.pam
 @@ -1,6 +1,6 @@
@@ -1744,6 +1899,38 @@ index 99729bc..b42991e 100755
  auth        required    pam_shells.so
  auth        required    pam_nologin.so
  auth        required    pam_permit.so
+diff --git a/services/sddm.pam b/services/sddm.pam
+old mode 100755
+new mode 100644
+index 343650e..df11003
+--- a/services/sddm.pam
++++ b/services/sddm.pam
+@@ -1,15 +1,15 @@
+ #%PAM-1.0
+ 
+-auth		include		system-login
+--auth		optional	pam_gnome_keyring.so
+--auth   optional  pam_kwallet5.so
++auth        include     system-login
++-auth       optional    pam_gnome_keyring.so
++-auth       optional    pam_kwallet5.so
+ 
+-account		include		system-login
++account     include     system-login
+ 
+-password	include		system-login
+--password	optional	pam_gnome_keyring.so use_authtok
++password    include     system-login
++-password   optional    pam_gnome_keyring.so    use_authtok
+ 
+-session		optional	pam_keyinit.so force revoke
+-session		include		system-login
+--session		optional	pam_gnome_keyring.so auto_start
+--session  optional  pam_kwallet5.so auto_start
++session     optional    pam_keyinit.so          force revoke
++session     include     system-login
++-session    optional    pam_gnome_keyring.so    auto_start
++-session    optional    pam_kwallet5.so         auto_start
 diff --git a/services/sddm.service.in b/services/sddm.service.in
 index 0335685..d787019 100644
 --- a/services/sddm.service.in
@@ -1757,7 +1944,7 @@ index 0335685..d787019 100644
  StartLimitBurst=2
  
 diff --git a/src/auth/Auth.cpp b/src/auth/Auth.cpp
-index caca314..ae767d1 100644
+index caca314..ae13711 100644
 --- a/src/auth/Auth.cpp
 +++ b/src/auth/Auth.cpp
 @@ -62,6 +62,7 @@ namespace SDDM {
@@ -1835,7 +2022,15 @@ index caca314..ae767d1 100644
      void Auth::setSession(const QString& path) {
          if (path != d->sessionPath) {
              d->sessionPath = path;
-@@ -354,10 +375,20 @@ namespace SDDM {
+@@ -347,17 +368,31 @@ namespace SDDM {
+     void Auth::start() {
+         QStringList args;
+         args << QStringLiteral("--socket") << SocketServer::instance()->fullServerName();
+-        args << QStringLiteral("--id") << QStringLiteral("%1").arg(d->id);
++        args << QStringLiteral("--id") << QString::number(d->id);
+         if (!d->sessionPath.isEmpty())
+             args << QStringLiteral("--start") << d->sessionPath;
+         if (!d->user.isEmpty())
              args << QStringLiteral("--user") << d->user;
          if (d->autologin)
              args << QStringLiteral("--autologin");
@@ -1847,6 +2042,10 @@ index caca314..ae767d1 100644
      }
 +
 +    void Auth::stop() {
++        if (d->child->state() == QProcess::NotRunning) {
++            return;
++        }
++
 +        d->child->terminate();
 +
 +        // wait for finished
@@ -1857,7 +2056,7 @@ index caca314..ae767d1 100644
  
  #include "Auth.moc"
 diff --git a/src/auth/Auth.h b/src/auth/Auth.h
-index 87f5f44..830b91e 100644
+index 87f5f44..0e39f69 100644
 --- a/src/auth/Auth.h
 +++ b/src/auth/Auth.h
 @@ -69,6 +69,7 @@ namespace SDDM {
@@ -1868,7 +2067,7 @@ index 87f5f44..830b91e 100644
  
          enum Error {
              ERROR_NONE = 0,
-@@ -77,6 +78,7 @@ namespace SDDM {
+@@ -77,13 +78,16 @@ namespace SDDM {
              ERROR_INTERNAL,
              _ERROR_LAST
          };
@@ -1876,15 +2075,17 @@ index 87f5f44..830b91e 100644
  
          enum HelperExitStatus {
              HELPER_SUCCESS = 0,
-@@ -84,6 +86,7 @@ namespace SDDM {
+             HELPER_AUTH_ERROR,
              HELPER_SESSION_ERROR,
-             HELPER_OTHER_ERROR
+-            HELPER_OTHER_ERROR
++            HELPER_OTHER_ERROR,
++            HELPER_DISPLAYSERVER_ERROR,
          };
 +        Q_ENUM(HelperExitStatus)
  
          static void registerTypes();
  
-@@ -139,6 +142,12 @@ namespace SDDM {
+@@ -139,6 +143,12 @@ namespace SDDM {
          */
          void setUser(const QString &user);
  
@@ -1897,7 +2098,7 @@ index 87f5f44..830b91e 100644
          /**
          * Set the session to be started after authenticating.
          * @param path Path of the session executable to be started
-@@ -157,12 +166,18 @@ namespace SDDM {
+@@ -157,12 +167,18 @@ namespace SDDM {
          */
          void start();
  
@@ -1916,7 +2117,7 @@ index 87f5f44..830b91e 100644
          void sessionChanged();
          void requestChanged();
  
-@@ -184,6 +199,13 @@ namespace SDDM {
+@@ -184,6 +200,13 @@ namespace SDDM {
          */
          void sessionStarted(bool success);
  
@@ -2060,7 +2261,7 @@ index e174b5b..4805128 100644
  #define UID_MIN                     @UID_MIN@
  #define UID_MAX                     @UID_MAX@
 diff --git a/src/common/MessageHandler.h b/src/common/MessageHandler.h
-index ba45d82..47ab0af 100644
+index ba45d82..db6c538 100644
 --- a/src/common/MessageHandler.h
 +++ b/src/common/MessageHandler.h
 @@ -24,7 +24,9 @@
@@ -2108,11 +2309,29 @@ index ba45d82..47ab0af 100644
          // create timestamp
          QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("hh:mm:ss.zzz"));
  
+@@ -114,7 +126,7 @@ namespace SDDM {
+ #ifdef HAVE_JOURNALD
+         // don't log to journald if running interactively, this is likely
+         // the case when running sddm in test mode
+-        static bool isInteractive = isatty(STDIN_FILENO);
++        static bool isInteractive = isatty(STDIN_FILENO) && qgetenv("USER") != "sddm";
+         if (!isInteractive) {
+             // log to journald
+             journaldLogger(type, context, logMessage);
 diff --git a/src/common/Messages.h b/src/common/Messages.h
-index c779791..f79a9db 100644
+index c779791..7cbe099 100644
 --- a/src/common/Messages.h
 +++ b/src/common/Messages.h
-@@ -37,7 +37,8 @@ namespace SDDM {
+@@ -30,14 +30,16 @@ namespace SDDM {
+         Reboot,
+         Suspend,
+         Hibernate,
+-        HybridSleep
++        HybridSleep,
++        KeyboardLayout,
+     };
+ 
+     enum class DaemonMessages {
          HostName,
          Capabilities,
          LoginSucceeded,
@@ -2265,10 +2484,16 @@ diff --git a/src/daemon/SignalHandler.cpp b/src/common/SignalHandler.cpp
 similarity index 61%
 rename from src/daemon/SignalHandler.cpp
 rename to src/common/SignalHandler.cpp
-index 810105e..4924d82 100644
+index 810105e..b829899 100644
 --- a/src/daemon/SignalHandler.cpp
 +++ b/src/common/SignalHandler.cpp
-@@ -24,51 +24,33 @@
+@@ -19,56 +19,42 @@
+ 
+ #include "SignalHandler.h"
+ 
++#include <QCoreApplication>
+ #include <QDebug>
+ #include <QSocketNotifier>
  
  #include <signal.h>
  #include <unistd.h>
@@ -2291,10 +2516,12 @@ index 810105e..4924d82 100644
 -
 -        snhup = new QSocketNotifier(sighupFd[1], QSocketNotifier::Read, this);
 -        connect(snhup, &QSocketNotifier::activated, this, &SignalHandler::handleSighup);
--
++        std::call_once(signalsInitialized, &initialize);
+ 
 -        if (::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sigintFd))
 -            qCritical() << "Failed to create socket pair for SIGINT handling.";
-+        std::call_once(signalsInitialized, &initialize);
++        // If it's done before creating the QCoreApplication, it just will not work
++        Q_ASSERT(QCoreApplication::instance());
  
          snint = new QSocketNotifier(sigintFd[1], QSocketNotifier::Read, this);
          connect(snint, &QSocketNotifier::activated, this, &SignalHandler::handleSigint);
@@ -2329,7 +2556,7 @@ index 810105e..4924d82 100644
  
          struct sigaction sigint = { };
          sigint.sa_handler = SignalHandler::intSignalHandler;
-@@ -80,6 +62,9 @@ namespace SDDM {
+@@ -80,6 +66,9 @@ namespace SDDM {
              return;
          }
  
@@ -2339,18 +2566,18 @@ index 810105e..4924d82 100644
          struct sigaction sigterm = { };
          sigterm.sa_handler = SignalHandler::termSignalHandler;
          sigemptyset(&sigterm.sa_mask);
-@@ -89,36 +74,20 @@ namespace SDDM {
+@@ -89,36 +78,20 @@ namespace SDDM {
              qCritical() << "Failed to set up SIGTERM handler.";
              return;
          }
 -    }
- 
+-
 -    void SignalHandler::initializeSigusr1() {
 -        struct sigaction sigusr1 = { };
 -        sigusr1.sa_handler = SignalHandler::usr1SignalHandler;
 -        sigemptyset(&sigusr1.sa_mask);
 -        sigusr1.sa_flags = SA_RESTART;
--
+ 
 -        if (sigaction(SIGUSR1, &sigusr1, 0) > 0) {
 -            qCritical() << "Failed to set up SIGUSR1 handler.";
 -            return;
@@ -2364,12 +2591,6 @@ index 810105e..4924d82 100644
 -        sigusr1.sa_handler = SIG_IGN;
 -        sigemptyset(&sigusr1.sa_mask);
 -        sigusr1.sa_flags = SA_RESTART;
--
--        if (sigaction(SIGUSR1, &sigusr1, 0) > 0) {
--            qCritical() << "Failed to set up SIGUSR1 handler.";
--            return;
--        }
--    }
 +    void SignalHandler::addCustomSignal(int signal)
 +    {
 +        struct sigaction sigcustom = { };
@@ -2377,6 +2598,12 @@ index 810105e..4924d82 100644
 +        sigemptyset(&sigcustom.sa_mask);
 +        sigcustom.sa_flags = SA_RESTART;
  
+-        if (sigaction(SIGUSR1, &sigusr1, 0) > 0) {
+-            qCritical() << "Failed to set up SIGUSR1 handler.";
+-            return;
+-        }
+-    }
+-
 -    void SignalHandler::hupSignalHandler(int) {
 -        char a = 1;
 -        if (::write(sighupFd[0], &a, sizeof(a)) == -1) {
@@ -2386,7 +2613,7 @@ index 810105e..4924d82 100644
              return;
          }
      }
-@@ -139,36 +108,13 @@ namespace SDDM {
+@@ -139,34 +112,11 @@ namespace SDDM {
          }
      }
  
@@ -2394,13 +2621,10 @@ index 810105e..4924d82 100644
 -        char a = 1;
 -        if (::write(sigusr1Fd[0], &a, sizeof(a)) == -1) {
 -            qCritical() << "Error writing to the SIGUSR1 handler";
-+    void SignalHandler::customSignalHandler(int signal) {
-+        if (::write(sigcustomFd[0], &signal, sizeof(signal)) == -1) {
-+            qCritical() << "Error writing to the " << strsignal(signal) << " handler";
-             return;
-         }
-     }
- 
+-            return;
+-        }
+-    }
+-
 -    void SignalHandler::handleSighup() {
 -        // disable notifier
 -        snhup->setEnabled(false);
@@ -2410,8 +2634,11 @@ index 810105e..4924d82 100644
 -        if (::read(sighupFd[1], &a, sizeof(a)) == -1) {
 -            // something went wrong!
 -            qCritical() << "Error reading from the socket";
--            return;
--        }
++    void SignalHandler::customSignalHandler(int signal) {
++        if (::write(sigcustomFd[0], &signal, sizeof(signal)) == -1) {
++            qCritical() << "Error writing to the " << strsignal(signal) << " handler";
+             return;
+         }
 -
 -        // log event
 -        qWarning() << "Signal received: SIGHUP";
@@ -2421,12 +2648,10 @@ index 810105e..4924d82 100644
 -
 -        // enable notifier
 -        snhup->setEnabled(true);
--    }
--
+     }
+ 
      void SignalHandler::handleSigint() {
-         // disable notifier
-         snint->setEnabled(false);
-@@ -213,25 +159,27 @@ namespace SDDM {
+@@ -213,25 +163,27 @@ namespace SDDM {
          snterm->setEnabled(true);
      }
  
@@ -2510,24 +2735,26 @@ index 567ce07..3568ef6 100644
  }
  #endif // SDDM_SIGNALHANDLER_H
 diff --git a/src/common/VirtualTerminal.cpp b/src/common/VirtualTerminal.cpp
-index 3ce6aff..386bfdc 100644
+index 3ce6aff..350e6a6 100644
 --- a/src/common/VirtualTerminal.cpp
 +++ b/src/common/VirtualTerminal.cpp
-@@ -30,6 +30,7 @@
+@@ -30,6 +30,8 @@
  #include <linux/vt.h>
  #include <linux/kd.h>
  #include <sys/ioctl.h>
 +#include <qscopeguard.h>
++#include <QFileInfo>
  
  #define RELEASE_DISPLAY_SIGNAL (SIGRTMAX)
  #define ACQUIRE_DISPLAY_SIGNAL (SIGRTMAX - 1)
-@@ -115,32 +116,57 @@ out:
+@@ -115,32 +117,50 @@ out:
                  qDebug() << "VT mode didn't need to be fixed";
          }
  
 -        int setUpNewVt() {
-+        int fetchAvailableVt() {
-             // open VT master
+-            // open VT master
++        int currentVt()
++        {
              int fd = open("/dev/tty0", O_RDWR | O_NOCTTY);
              if (fd < 0) {
                  qCritical() << "Failed to open VT master:" << strerror(errno);
@@ -2539,27 +2766,21 @@ index 3ce6aff..386bfdc 100644
  
              vt_stat vtState = { 0 };
              if (ioctl(fd, VT_GETSTATE, &vtState) < 0) {
-                 qCritical() << "Failed to get current VT:" << strerror(errno);
+-                qCritical() << "Failed to get current VT:" << strerror(errno);
 -                close(fd);
-+
-+                int vt = 0;
-+                // If there's no current tty, request the next to open
-+                if (ioctl(fd, VT_OPENQRY, &vt) < 0) {
-+                    qCritical() << "Failed to open new VT:" << strerror(errno);
-+                    return -1;
-+                }
-+                return vt;
-+            }
+                 return -1;
+             }
 +            return vtState.v_active;
 +        }
++
 +
 +        int setUpNewVt() {
 +            // open VT master
 +            int fd = open("/dev/tty0", O_RDWR | O_NOCTTY);
 +            if (fd < 0) {
 +                qCritical() << "Failed to open VT master:" << strerror(errno);
-                 return -1;
-             }
++                return -1;
++            }
 +            auto closeFd = qScopeGuard([fd] {
 +                close(fd);
 +            });
@@ -2584,7 +2805,7 @@ index 3ce6aff..386bfdc 100644
                  qWarning() << "New VT" << vt << "is not valid, fall back to" << vtState.v_active;
                  return vtState.v_active;
              }
-@@ -160,6 +186,10 @@ out:
+@@ -160,6 +180,10 @@ out:
              if (vtFd != -1) {
                  fd = vtFd;
  
@@ -2595,7 +2816,7 @@ index 3ce6aff..386bfdc 100644
                  // set graphics mode to prevent flickering
                  if (ioctl(fd, KDSETMODE, KD_GRAPHICS) < 0)
                      qWarning("Failed to set graphics mode for VT %d: %s", vt, strerror(errno));
-@@ -181,11 +211,21 @@ out:
+@@ -181,11 +205,21 @@ out:
              if (!vt_auto)
                  handleVtSwitches(fd);
  
@@ -2622,19 +2843,19 @@ index 3ce6aff..386bfdc 100644
              if (vtFd != -1)
                  close(vtFd);
 diff --git a/src/common/VirtualTerminal.h b/src/common/VirtualTerminal.h
-index 1b17086..2230049 100644
+index 1b17086..68355b0 100644
 --- a/src/common/VirtualTerminal.h
 +++ b/src/common/VirtualTerminal.h
 @@ -22,6 +22,7 @@
  
  namespace SDDM {
      namespace VirtualTerminal {
-+        int fetchAvailableVt();
++        int currentVt();
          int setUpNewVt();
          void jumpToVt(int vt, bool vt_auto);
      }
 diff --git a/src/common/VirtualTerminal_FreeBSD.cpp b/src/common/VirtualTerminal_FreeBSD.cpp
-index aaf1b61..55de967 100644
+index aaf1b61..bbe7974 100644
 --- a/src/common/VirtualTerminal_FreeBSD.cpp
 +++ b/src/common/VirtualTerminal_FreeBSD.cpp
 @@ -1,5 +1,6 @@
@@ -2644,7 +2865,7 @@ index aaf1b61..55de967 100644
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
-@@ -22,16 +23,62 @@
+@@ -22,16 +23,61 @@
  
  #include "VirtualTerminal.h"
  
@@ -2657,15 +2878,14 @@ index aaf1b61..55de967 100644
  
  namespace SDDM {
      namespace VirtualTerminal {
+-        int setUpNewVt() {
+-            qDebug() << "New VT is unsupported on FreeBSD";
 +        static char ttyvX[] = "/dev/ttyvX";
 +        static const char ttyvs[] = "0123456789ab";
 +
-         int setUpNewVt() {
--            qDebug() << "New VT is unsupported on FreeBSD";
--            return -1;
-+            // there is no way to create VTs on FreeBSD, so
-+            // just try to fetch any available
-+            return fetchAvailableVt();
++        int currentVt()
++        {
+             return -1;
          }
  
          void jumpToVt(int vt, bool vt_auto) {
@@ -2692,7 +2912,7 @@ index aaf1b61..55de967 100644
 +            }
 +        }
 +
-+        int fetchAvailableVt() {
++        int setUpNewVt() {
 +            int fd = ::open("/dev/console", O_RDONLY);
 +            if(fd == -1) {
 +                qWarning() << "Failed to open /dev/console: " << strerror(errno);
@@ -2905,7 +3125,7 @@ index 0000000..3e80f4e
 +
 +#endif // SDDM_XAUTH_H
 diff --git a/src/daemon/CMakeLists.txt b/src/daemon/CMakeLists.txt
-index 86d014b..678a92a 100644
+index 86d014b..6d38166 100644
 --- a/src/daemon/CMakeLists.txt
 +++ b/src/daemon/CMakeLists.txt
 @@ -13,6 +13,8 @@ set(DAEMON_SOURCES
@@ -2936,11 +3156,19 @@ index 86d014b..678a92a 100644
  )
  
  # Different implementations of the VT switching code
+@@ -42,6 +47,7 @@ endif()
+ qt5_add_dbus_adaptor(DAEMON_SOURCES "${CMAKE_SOURCE_DIR}/data/interfaces/org.freedesktop.DisplayManager.xml"          "DisplayManager.h" SDDM::DisplayManager)
+ qt5_add_dbus_adaptor(DAEMON_SOURCES "${CMAKE_SOURCE_DIR}/data/interfaces/org.freedesktop.DisplayManager.Seat.xml"     "DisplayManager.h" SDDM::DisplayManagerSeat)
+ qt5_add_dbus_adaptor(DAEMON_SOURCES "${CMAKE_SOURCE_DIR}/data/interfaces/org.freedesktop.DisplayManager.Session.xml"  "DisplayManager.h" SDDM::DisplayManagerSession)
++qt_add_dbus_interface(DAEMON_SOURCES ${CMAKE_SOURCE_DIR}/data/interfaces/org.freedesktop.locale1.xml locale1_interface)
+ 
+ 
+ set_source_files_properties("${CMAKE_SOURCE_DIR}/data/interfaces/org.freedesktop.login1.Manager.xml" PROPERTIES
 diff --git a/src/daemon/DaemonApp.cpp b/src/daemon/DaemonApp.cpp
-index 2b9b9f6..490068e 100644
+index 2b9b9f6..09e9963 100644
 --- a/src/daemon/DaemonApp.cpp
 +++ b/src/daemon/DaemonApp.cpp
-@@ -28,6 +28,7 @@
+@@ -28,11 +28,13 @@
  
  #include "MessageHandler.h"
  
@@ -2948,7 +3176,13 @@ index 2b9b9f6..490068e 100644
  #include <QDebug>
  #include <QHostInfo>
  #include <QTimer>
-@@ -49,6 +50,21 @@ namespace SDDM {
+ 
+ #include <iostream>
++#include <locale1_interface.h>
+ 
+ namespace SDDM {
+     DaemonApp *DaemonApp::self = nullptr;
+@@ -49,6 +51,21 @@ namespace SDDM {
          // set testing parameter
          m_testing = (arguments().indexOf(QStringLiteral("--test-mode")) != -1);
  
@@ -2970,7 +3204,7 @@ index 2b9b9f6..490068e 100644
          // create display manager
          m_displayManager = new DisplayManager(this);
  
-@@ -65,9 +81,6 @@ namespace SDDM {
+@@ -65,9 +82,6 @@ namespace SDDM {
          // create signal handler
          m_signalHandler = new SignalHandler(this);
  
@@ -2980,8 +3214,34 @@ index 2b9b9f6..490068e 100644
          // quit when SIGINT, SIGTERM received
          connect(m_signalHandler, &SignalHandler::sigintReceived, this, &DaemonApp::quit);
          connect(m_signalHandler, &SignalHandler::sigtermReceived, this, &DaemonApp::quit);
+@@ -106,6 +120,12 @@ namespace SDDM {
+     int DaemonApp::newSessionId() {
+         return m_lastSessionId++;
+     }
++
++    void DaemonApp::setKeyboardLayout(const QString &layout) {
++        OrgFreedesktopLocale1Interface locale1(QStringLiteral("org.freedesktop.locale1"), QStringLiteral("/org/freedesktop/locale1"),
++                                                   QDBusConnection::systemBus());
++        locale1.SetX11Keyboard(layout, {}, {}, {}, false, false);
++    }
+ }
+ 
+ int main(int argc, char **argv) {
+diff --git a/src/daemon/DaemonApp.h b/src/daemon/DaemonApp.h
+index b72873e..83d098e 100644
+--- a/src/daemon/DaemonApp.h
++++ b/src/daemon/DaemonApp.h
+@@ -49,6 +49,8 @@ namespace SDDM {
+         SeatManager *seatManager() const;
+         SignalHandler *signalHandler() const;
+ 
++        void setKeyboardLayout(const QString &layout);
++
+     public slots:
+         int newSessionId();
+ 
 diff --git a/src/daemon/Display.cpp b/src/daemon/Display.cpp
-index b95f6e5..fa53a36 100644
+index b95f6e5..c2437c7 100644
 --- a/src/daemon/Display.cpp
 +++ b/src/daemon/Display.cpp
 @@ -25,11 +25,11 @@
@@ -2997,15 +3257,18 @@ index b95f6e5..fa53a36 100644
  
  #include <QDebug>
  #include <QFile>
-@@ -38,6 +38,7 @@
+@@ -38,6 +38,10 @@
  
  #include <pwd.h>
  #include <unistd.h>
 +#include <sys/time.h>
++
++#include <sys/ioctl.h>
++#include <fcntl.h>
  
  #include <QDBusConnection>
  #include <QDBusMessage>
-@@ -45,17 +46,52 @@
+@@ -45,16 +49,85 @@
  
  #include "Login1Manager.h"
  #include "Login1Session.h"
@@ -3016,52 +3279,86 @@ index b95f6e5..fa53a36 100644
  namespace SDDM {
 -    Display::Display(const int terminalId, Seat *parent) : QObject(parent),
 -        m_terminalId(terminalId),
-+    Display::Display(Seat *parent) : QObject(parent),
++    bool isTtyInUse(const QString &desiredTty) {
++        if (Logind::isAvailable()) {
++            OrgFreedesktopLogin1ManagerInterface manager(Logind::serviceName(), Logind::managerPath(), QDBusConnection::systemBus());
++            auto reply = manager.ListSessions();
++            reply.waitForFinished();
++
++            const auto info = reply.value();
++            for(const SessionInfo &s : info) {
++                OrgFreedesktopLogin1SessionInterface session(Logind::serviceName(), s.sessionPath.path(), QDBusConnection::systemBus());
++                if (desiredTty == session.tTY() && session.state() != QLatin1String("closing")) {
++                    qDebug() << "tty" << desiredTty << "already in use by" << session.user().path << session.state()
++                                      << session.display() << session.desktop() << session.vTNr();
++                    return true;
++                }
++            }
++        }
++        return false;
++    }
++
++    int fetchAvailableVt() {
++        const auto vt = VirtualTerminal::currentVt();
++        if (vt > 0) {
++            if (!isTtyInUse(QStringLiteral("tty%1").arg(vt))) {
++                return vt;
++            }
++        }
++        return VirtualTerminal::setUpNewVt();
++    }
++
++    Display::DisplayServerType Display::defaultDisplayServerType()
++    {
++        const QString &displayServerType = mainConfig.DisplayServer.get().toLower();
++        DisplayServerType ret;
++        if (displayServerType == QStringLiteral("x11-user")) {
++            ret = X11UserDisplayServerType;
++        } else if (displayServerType == QStringLiteral("wayland")) {
++            ret = WaylandDisplayServerType;
++        } else {
++            if (displayServerType != QLatin1String("x11")) {
++                qWarning("\"%s\" is an invalid value for General.DisplayServer: fall back to \"x11\"",
++                    qPrintable(displayServerType));
++            }
++            ret = X11DisplayServerType;
++        }
++        return ret;
++    }
++
++    Display::Display(Seat *parent, DisplayServerType serverType)
++        : QObject(parent),
++        m_displayServerType(serverType),
          m_auth(new Auth(this)),
 -        m_displayServer(new XorgDisplayServer(this)),
          m_seat(parent),
          m_socketServer(new SocketServer(this)),
-         m_greeter(new Greeter(this)) {
- 
-+
-+        // Save display server type
-+        const QString &displayServerType = mainConfig.DisplayServer.get().toLower();
-+        if (displayServerType == QStringLiteral("x11-user")) {
-+            m_displayServerType = X11UserDisplayServerType;
-+            m_terminalId = VirtualTerminal::fetchAvailableVt();
-+        } else if (displayServerType == QStringLiteral("wayland")) {
-+            m_displayServerType = WaylandDisplayServerType;
-+            m_terminalId = VirtualTerminal::fetchAvailableVt();
-+        } else {
-+            if (displayServerType != QLatin1String("x11")) {
-+                qWarning("\"%s\" is an invalid value for General.DisplayServer: fall back to \"x11\"",
-+                     qPrintable(displayServerType));
-+            }
-+            m_terminalId = VirtualTerminal::setUpNewVt();
-+            m_displayServerType = X11DisplayServerType;
-+        }
-+
+-        m_greeter(new Greeter(this)) {
++        m_greeter(new Greeter(this))
++    {
 +        // Create display server
 +        switch (m_displayServerType) {
 +        case X11DisplayServerType:
++            m_terminalId = VirtualTerminal::setUpNewVt();
 +            m_displayServer = new XorgDisplayServer(this);
 +            break;
 +        case X11UserDisplayServerType:
++            m_terminalId = fetchAvailableVt();
 +            m_displayServer = new XorgUserDisplayServer(this);
 +            m_greeter->setDisplayServerCommand(XorgUserDisplayServer::command(this));
 +            break;
 +        case WaylandDisplayServerType:
++            m_terminalId = fetchAvailableVt();
 +            m_displayServer = new WaylandDisplayServer(this);
 +            m_greeter->setDisplayServerCommand(mainConfig.Wayland.CompositorCommand.get());
 +            break;
 +        }
 +
 +        qDebug("Using VT %d", m_terminalId);
-+
+ 
          // respond to authentication requests
          m_auth->setVerbose(true);
-         connect(m_auth, &Auth::requestChanged, this, &Display::slotRequestChanged);
-@@ -73,16 +109,28 @@ namespace SDDM {
+@@ -73,16 +146,29 @@ namespace SDDM {
          connect(m_socketServer, &SocketServer::login, this, &Display::login);
  
          // connect login result signals
@@ -3074,6 +3371,7 @@ index b95f6e5..fa53a36 100644
 +                QCoreApplication::instance(), [] {
 +                    QCoreApplication::instance()->exit(23);
 +                });
++        connect(m_greeter, &Greeter::displayServerFailed, this, &Display::displayServerFailed);
      }
  
      Display::~Display() {
@@ -3094,7 +3392,7 @@ index b95f6e5..fa53a36 100644
      }
  
      const int Display::terminalId() const {
-@@ -154,6 +202,8 @@ namespace SDDM {
+@@ -154,6 +240,8 @@ namespace SDDM {
              bool success = attemptAutologin();
              if (success) {
                  return;
@@ -3103,7 +3401,7 @@ index b95f6e5..fa53a36 100644
              }
          }
  
-@@ -172,8 +222,8 @@ namespace SDDM {
+@@ -172,8 +260,8 @@ namespace SDDM {
          }
  
          // set greeter params
@@ -3114,7 +3412,7 @@ index b95f6e5..fa53a36 100644
          m_greeter->setSocket(m_socketServer->socketAddress());
          m_greeter->setTheme(findGreeterTheme());
  
-@@ -195,6 +245,8 @@ namespace SDDM {
+@@ -195,6 +283,8 @@ namespace SDDM {
          // stop the greeter
          m_greeter->stop();
  
@@ -3123,7 +3421,7 @@ index b95f6e5..fa53a36 100644
          // stop socket server
          m_socketServer->stop();
  
-@@ -245,6 +297,11 @@ namespace SDDM {
+@@ -245,6 +335,11 @@ namespace SDDM {
      }
  
      bool Display::findSessionEntry(const QDir &dir, const QString &name) const {
@@ -3135,7 +3433,7 @@ index b95f6e5..fa53a36 100644
          QString fileName = name;
  
          // append extension
-@@ -297,41 +354,49 @@ namespace SDDM {
+@@ -297,41 +392,49 @@ namespace SDDM {
              }
          }
  
@@ -3199,7 +3497,7 @@ index b95f6e5..fa53a36 100644
          m_auth->start();
      }
  
-@@ -344,7 +409,8 @@ namespace SDDM {
+@@ -344,7 +447,8 @@ namespace SDDM {
                  manager.UnlockSession(m_reuseSessionId);
                  manager.ActivateSession(m_reuseSessionId);
              } else {
@@ -3209,7 +3507,7 @@ index b95f6e5..fa53a36 100644
              }
  
              // save last user and last session
-@@ -368,18 +434,21 @@ namespace SDDM {
+@@ -368,18 +472,21 @@ namespace SDDM {
      }
  
      void Display::slotAuthInfo(const QString &message, Auth::Info info) {
@@ -3236,7 +3534,7 @@ index b95f6e5..fa53a36 100644
          if (error == Auth::ERROR_AUTHENTICATION)
              emit loginFailed(m_socket);
      }
-@@ -406,6 +475,9 @@ namespace SDDM {
+@@ -406,6 +513,9 @@ namespace SDDM {
      }
  
      void Display::slotSessionStarted(bool success) {
@@ -3248,7 +3546,7 @@ index b95f6e5..fa53a36 100644
      }
  }
 diff --git a/src/daemon/Display.h b/src/daemon/Display.h
-index e68bc12..b4a1bf8 100644
+index e68bc12..ee96646 100644
 --- a/src/daemon/Display.h
 +++ b/src/daemon/Display.h
 @@ -23,6 +23,7 @@
@@ -3259,7 +3557,7 @@ index e68bc12..b4a1bf8 100644
  #include <QDir>
  
  #include "Auth.h"
-@@ -41,10 +42,19 @@ namespace SDDM {
+@@ -41,10 +42,20 @@ namespace SDDM {
          Q_OBJECT
          Q_DISABLE_COPY(Display)
      public:
@@ -3271,7 +3569,8 @@ index e68bc12..b4a1bf8 100644
 +        };
 +        Q_ENUM(DisplayServerType)
 +
-+        explicit Display(Seat *parent);
++        static DisplayServerType defaultDisplayServerType();
++        explicit Display(Seat *parent, DisplayServerType serverType);
          ~Display();
  
 -        QString displayId() const;
@@ -3281,7 +3580,15 @@ index e68bc12..b4a1bf8 100644
          const int terminalId() const;
  
          const QString &name() const;
-@@ -76,12 +86,12 @@ namespace SDDM {
+@@ -65,6 +76,7 @@ namespace SDDM {
+ 
+     signals:
+         void stopped();
++        void displayServerFailed();
+ 
+         void loginFailed(QLocalSocket *socket);
+         void loginSucceeded(QLocalSocket *socket);
+@@ -76,12 +88,12 @@ namespace SDDM {
          void startAuth(const QString &user, const QString &password,
                         const Session &session);
  
@@ -3297,7 +3604,7 @@ index e68bc12..b4a1bf8 100644
  
          QString m_passPhrase;
          QString m_sessionName;
-@@ -91,7 +101,7 @@ namespace SDDM {
+@@ -91,7 +103,7 @@ namespace SDDM {
          DisplayServer *m_displayServer { nullptr };
          Seat *m_seat { nullptr };
          SocketServer *m_socketServer { nullptr };
@@ -3307,7 +3614,7 @@ index e68bc12..b4a1bf8 100644
  
      private slots:
 diff --git a/src/daemon/Greeter.cpp b/src/daemon/Greeter.cpp
-index 878576b..de887cc 100644
+index 878576b..eadae5a 100644
 --- a/src/daemon/Greeter.cpp
 +++ b/src/daemon/Greeter.cpp
 @@ -27,12 +27,17 @@
@@ -3483,7 +3790,7 @@ index 878576b..de887cc 100644
      }
  
      void Greeter::onRequestChanged() {
-@@ -259,16 +286,38 @@ namespace SDDM {
+@@ -259,29 +286,55 @@ namespace SDDM {
              qDebug() << "Greeter session failed to start";
      }
  
@@ -3512,6 +3819,10 @@ index 878576b..de887cc 100644
          m_auth->deleteLater();
          m_auth = nullptr;
 +
++        if (status == Auth::HELPER_DISPLAYSERVER_ERROR) {
++            Q_EMIT displayServerFailed();
++        }
++
 +        if (status == Auth::HELPER_SESSION_ERROR) {
 +            Q_EMIT failed();
 +        }
@@ -3523,8 +3834,23 @@ index 878576b..de887cc 100644
      }
  
      void Greeter::onReadyReadStandardError()
+     {
+         if (m_process) {
+-            qDebug() << "Greeter errors:" << qPrintable(QString::fromLocal8Bit(m_process->readAllStandardError()));
++            qDebug() << "Greeter errors:" << m_process->readAllStandardError().constData();
+         }
+     }
+ 
+     void Greeter::onReadyReadStandardOutput()
+     {
+         if (m_process) {
+-            qDebug() << "Greeter output:" << qPrintable(QString::fromLocal8Bit(m_process->readAllStandardOutput()));
++            qDebug() << "Greeter output:" << m_process->readAllStandardOutput().constData();
+         }
+     }
+ 
 diff --git a/src/daemon/Greeter.h b/src/daemon/Greeter.h
-index 7391a35..376ecdc 100644
+index 7391a35..5a69ccd 100644
 --- a/src/daemon/Greeter.h
 +++ b/src/daemon/Greeter.h
 @@ -35,14 +35,17 @@ namespace SDDM {
@@ -3547,7 +3873,7 @@ index 7391a35..376ecdc 100644
      public slots:
          bool start();
          void stop();
-@@ -51,19 +54,24 @@ namespace SDDM {
+@@ -51,19 +54,25 @@ namespace SDDM {
      private slots:
          void onRequestChanged();
          void onSessionStarted(bool success);
@@ -3560,6 +3886,7 @@ index 7391a35..376ecdc 100644
  
 +    signals:
 +        void failed();
++        void displayServerFailed();
 +
      private:
          bool m_started { false };
@@ -3596,10 +3923,10 @@ index 6eca29f..ab1d6ac 100644
  
          void suspend() const {
 diff --git a/src/daemon/Seat.cpp b/src/daemon/Seat.cpp
-index eef26da..76e7507 100644
+index eef26da..aff17d7 100644
 --- a/src/daemon/Seat.cpp
 +++ b/src/daemon/Seat.cpp
-@@ -28,22 +28,11 @@
+@@ -28,80 +28,75 @@
  
  #include <QDebug>
  #include <QFile>
@@ -3621,14 +3948,16 @@ index eef26da..76e7507 100644
 -    }
 -
      Seat::Seat(const QString &name, QObject *parent) : QObject(parent), m_name(name) {
-         createDisplay();
+-        createDisplay();
++        createDisplay(Display::defaultDisplayServerType());
      }
-@@ -52,30 +41,13 @@ namespace SDDM {
+ 
+     const QString &Seat::name() const {
          return m_name;
      }
  
 -    bool Seat::createDisplay(int terminalId) {
-+    void Seat::createDisplay() {
++    void Seat::createDisplay(Display::DisplayServerType serverType) {
          //reload config if needed
          mainConfig.load();
  
@@ -3653,11 +3982,26 @@ index eef26da..76e7507 100644
          // create a new display
 -        Display *display = new Display(terminalId, this);
 +        qDebug() << "Adding new display...";
-+        Display *display = new Display(this);
++        Display *display = new Display(this, serverType);
  
          // restart display on stop
          connect(display, &Display::stopped, this, &Seat::displayStopped);
-@@ -84,24 +56,33 @@ namespace SDDM {
++        connect(display, &Display::displayServerFailed, this, [this, display] {
++            removeDisplay(display);
++
++            // If we failed to create a display with wayland or rootful x11, try with
++            // x11-user. There's a chance it might work. It's a handy fallback
++            // since the alternative is a black screen
++            if (display->displayServerType() != Display::X11UserDisplayServerType) {
++                qWarning() << "Failed to launch the display server, falling back to DisplayServer=x11-user";
++                createDisplay(Display::X11UserDisplayServerType);
++            } else if (m_displays.isEmpty()) {
++                qWarning() << "Failed to launch a DisplayServer=x11-user session, aborting";
++                QCoreApplication::instance()->exit(12);
++            }
++        });
+ 
+         // add display to the list
          m_displays << display;
  
          // start the display
@@ -3699,16 +4043,35 @@ index eef26da..76e7507 100644
          // stop the display
          display->blockSignals(true);
          display->stop();
+@@ -119,7 +114,7 @@ namespace SDDM {
+ 
+         // restart otherwise
+         if (m_displays.isEmpty()) {
+-            createDisplay();
++            createDisplay(Display::defaultDisplayServerType());
+         }
+         // If there is still a session running on some display,
+         // switch to last display in display vector.
 diff --git a/src/daemon/Seat.h b/src/daemon/Seat.h
-index bf22566..685eaed 100644
+index bf22566..82294de 100644
 --- a/src/daemon/Seat.h
 +++ b/src/daemon/Seat.h
-@@ -35,17 +35,18 @@ namespace SDDM {
+@@ -22,6 +22,7 @@
+ 
+ #include <QObject>
+ #include <QVector>
++#include "Display.h"
+ 
+ namespace SDDM {
+     class Display;
+@@ -33,19 +34,20 @@ namespace SDDM {
+         explicit Seat(const QString &name, QObject *parent = 0);
+ 
          const QString &name() const;
++        void createDisplay(Display::DisplayServerType serverType);
  
      public slots:
 -        bool createDisplay(int terminalId = -1);
-+        void createDisplay();
          void removeDisplay(SDDM::Display* display);
  
      private slots:
@@ -3724,11 +4087,198 @@ index bf22566..685eaed 100644
      };
  }
  
+diff --git a/src/daemon/SeatManager.cpp b/src/daemon/SeatManager.cpp
+index 60d22ea..429ed19 100644
+--- a/src/daemon/SeatManager.cpp
++++ b/src/daemon/SeatManager.cpp
+@@ -149,7 +149,7 @@ namespace SDDM {
+             return;
+ 
+         // switch to greeter
+-        m_seats.value(name)->createDisplay();
++        m_seats.value(name)->createDisplay(Display::defaultDisplayServerType());
+     }
+ 
+     void SDDM::SeatManager::logindSeatAdded(const QString& name, const QDBusObjectPath& objectPath)
 diff --git a/src/daemon/SocketServer.cpp b/src/daemon/SocketServer.cpp
-index bcc56fe..f79a55f 100644
+index bcc56fe..64e3afd 100644
 --- a/src/daemon/SocketServer.cpp
 +++ b/src/daemon/SocketServer.cpp
-@@ -195,4 +195,8 @@ namespace SDDM {
+@@ -109,83 +109,98 @@ namespace SDDM {
+         // input stream
+         QDataStream input(socket);
+ 
+-        // read message
+-        quint32 message;
+-        input >> message;
+-
+-        switch (GreeterMessages(message)) {
+-            case GreeterMessages::Connect: {
+-                // log message
+-                qDebug() << "Message received from greeter: Connect";
+-
+-                // send capabilities
+-                SocketWriter(socket) << quint32(DaemonMessages::Capabilities) << quint32(daemonApp->powerManager()->capabilities());
+-
+-                // send host name
+-                SocketWriter(socket) << quint32(DaemonMessages::HostName) << daemonApp->hostName();
+-
+-                // emit signal
+-                emit connected();
+-            }
+-            break;
+-            case GreeterMessages::Login: {
+-                // log message
+-                qDebug() << "Message received from greeter: Login";
+-
+-                // read username, pasword etc.
+-                QString user, password, filename;
+-                Session session;
+-                input >> user >> password >> session;
+-
+-                // emit signal
+-                emit login(socket, user, password, session);
+-            }
+-            break;
+-            case GreeterMessages::PowerOff: {
+-                // log message
+-                qDebug() << "Message received from greeter: PowerOff";
+-
+-                // power off
+-                daemonApp->powerManager()->powerOff();
+-            }
+-            break;
+-            case GreeterMessages::Reboot: {
+-                // log message
+-                qDebug() << "Message received from greeter: Reboot";
+-
+-                // reboot
+-                daemonApp->powerManager()->reboot();
+-            }
+-            break;
+-            case GreeterMessages::Suspend: {
+-                // log message
+-                qDebug() << "Message received from greeter: Suspend";
+-
+-                // suspend
+-                daemonApp->powerManager()->suspend();
+-            }
+-            break;
+-            case GreeterMessages::Hibernate: {
+-                // log message
+-                qDebug() << "Message received from greeter: Hibernate";
+-
+-                // hibernate
+-                daemonApp->powerManager()->hibernate();
+-            }
+-            break;
+-            case GreeterMessages::HybridSleep: {
+-                // log message
+-                qDebug() << "Message received from greeter: HybridSleep";
+-
+-                // hybrid sleep
+-                daemonApp->powerManager()->hybridSleep();
+-            }
+-            break;
+-            default: {
+-                // log message
+-                qWarning() << "Unknown message" << message;
++        // Qt's QLocalSocket::readyRead is not designed to be called at every socket.write(), 
++        // so we need to use a loop to read all the signals.
++        while(socket->bytesAvailable()) {
++            // read message
++            quint32 message;
++            input >> message;
++
++            switch (GreeterMessages(message)) {
++                case GreeterMessages::Connect: {
++                    // log message
++                    qDebug() << "Message received from greeter: Connect";
++
++                    // send capabilities
++                    SocketWriter(socket) << quint32(DaemonMessages::Capabilities) << quint32(daemonApp->powerManager()->capabilities());
++
++                    // send host name
++                    SocketWriter(socket) << quint32(DaemonMessages::HostName) << daemonApp->hostName();
++
++                    // emit signal
++                    emit connected();
++                }
++                break;
++                case GreeterMessages::Login: {
++                    // log message
++                    qDebug() << "Message received from greeter: Login";
++
++                    // read username, pasword etc.
++                    QString user, password, filename;
++                    Session session;
++                    input >> user >> password >> session;
++
++                    // emit signal
++                    emit login(socket, user, password, session);
++                }
++                break;
++                case GreeterMessages::PowerOff: {
++                    // log message
++                    qDebug() << "Message received from greeter: PowerOff";
++
++                    // power off
++                    daemonApp->powerManager()->powerOff();
++                }
++                break;
++                case GreeterMessages::Reboot: {
++                    // log message
++                    qDebug() << "Message received from greeter: Reboot";
++
++                    // reboot
++                    daemonApp->powerManager()->reboot();
++                }
++                break;
++                case GreeterMessages::Suspend: {
++                    // log message
++                    qDebug() << "Message received from greeter: Suspend";
++
++                    // suspend
++                    daemonApp->powerManager()->suspend();
++                }
++                break;
++                case GreeterMessages::Hibernate: {
++                    // log message
++                    qDebug() << "Message received from greeter: Hibernate";
++
++                    // hibernate
++                    daemonApp->powerManager()->hibernate();
++                }
++                break;
++                case GreeterMessages::HybridSleep: {
++                    // log message
++                    qDebug() << "Message received from greeter: HybridSleep";
++
++                    // hybrid sleep
++                    daemonApp->powerManager()->hybridSleep();
++                }
++                break;
++                case GreeterMessages::KeyboardLayout: {
++                    qDebug() << "Message received from greeter: Keyboard Layout switch";
++
++                    // read username, pasword etc.
++                    QString layout;
++                    input >> layout;
++
++                    daemonApp->setKeyboardLayout(layout);
++                }
++                break;
++                default: {
++                    // log message
++                    qWarning() << "Unknown message" << message;
++                }
+             }
+         }
++
+     }
+ 
+     void SocketServer::loginFailed(QLocalSocket *socket) {
+@@ -195,4 +210,8 @@ namespace SDDM {
      void SocketServer::loginSucceeded(QLocalSocket *socket) {
          SocketWriter(socket) << quint32(DaemonMessages::LoginSucceeded);
      }
@@ -4497,7 +5047,7 @@ index 0000000..aa7cbe4
 +
 +#endif // SDDM_XORGUSERDISPLAYSERVER_H
 diff --git a/src/greeter/CMakeLists.txt b/src/greeter/CMakeLists.txt
-index 2752964..0ef7ec1 100644
+index 2752964..943a42a 100644
 --- a/src/greeter/CMakeLists.txt
 +++ b/src/greeter/CMakeLists.txt
 @@ -8,6 +8,7 @@ set(GREETER_SOURCES
@@ -4508,7 +5058,11 @@ index 2752964..0ef7ec1 100644
      ${CMAKE_SOURCE_DIR}/src/common/SocketWriter.cpp
      ${CMAKE_SOURCE_DIR}/src/common/ThemeConfig.cpp
      ${CMAKE_SOURCE_DIR}/src/common/ThemeMetadata.cpp
-@@ -18,6 +19,8 @@ set(GREETER_SOURCES
+@@ -15,9 +16,12 @@ set(GREETER_SOURCES
+     GreeterProxy.cpp
+     KeyboardLayout.cpp
+     KeyboardModel.cpp
++    KeyboardBackend.cpp
      ScreenModel.cpp
      SessionModel.cpp
      UserModel.cpp
@@ -4518,7 +5072,7 @@ index 2752964..0ef7ec1 100644
  )
  
 diff --git a/src/greeter/GreeterApp.cpp b/src/greeter/GreeterApp.cpp
-index bbce512..b300f31 100644
+index bbce512..39d14c7 100644
 --- a/src/greeter/GreeterApp.cpp
 +++ b/src/greeter/GreeterApp.cpp
 @@ -24,6 +24,7 @@
@@ -4537,7 +5091,15 @@ index bbce512..b300f31 100644
          m_views.append(view);
  
          // remove the view when the screen is removed, but we
-@@ -258,14 +260,20 @@ namespace SDDM {
+@@ -243,6 +245,7 @@ namespace SDDM {
+     {
+         // Connect to the daemon
+         m_proxy = new GreeterProxy(m_socket);
++        m_keyboard->setProxy(m_proxy);
+         if (!m_testing && !m_proxy->isConnected()) {
+             qCritical() << "Cannot connect to the daemon - is it running?";
+             QCoreApplication::exit(EXIT_FAILURE);
+@@ -258,14 +261,20 @@ namespace SDDM {
          }
  
          // Set font
@@ -4562,7 +5124,37 @@ index bbce512..b300f31 100644
          // Create views
          const QList<QScreen *> screens = qGuiApp->primaryScreen()->virtualSiblings();
          for (QScreen *screen : screens)
-@@ -334,7 +342,20 @@ int main(int argc, char **argv)
+@@ -296,9 +305,7 @@ namespace SDDM {
+ 
+ int main(int argc, char **argv)
+ {
+-    // Install message handler
+-    qInstallMessageHandler(SDDM::GreeterMessageHandler);
+-
++    bool testMode = false;
+     // We set an attribute based on the platform we run on.
+     // We only know the platform after we constructed QGuiApplication
+     // though, so we need to find it out ourselves.
+@@ -307,6 +314,7 @@ int main(int argc, char **argv)
+         if(qstrcmp(argv[i], "-platform") == 0) {
+             platform = QString::fromUtf8(argv[i + 1]);
+         }
++        testMode |= qstrcmp(argv[i], "--test-mode") == 0;
+     }
+     if (platform.isEmpty()) {
+         platform = QString::fromUtf8(qgetenv("QT_QPA_PLATFORM"));
+@@ -315,6 +323,10 @@ int main(int argc, char **argv)
+         platform = QStringLiteral("xcb");
+     }
+ 
++    // Install message handler
++    if (!testMode)
++        qInstallMessageHandler(SDDM::GreeterMessageHandler);
++
+     // HiDPI
+     bool hiDpiEnabled = false;
+     if (platform == QStringLiteral("xcb"))
+@@ -334,7 +346,22 @@ int main(int argc, char **argv)
          QSurfaceFormat::setDefaultFormat(format);
      }
  
@@ -4570,6 +5162,8 @@ index bbce512..b300f31 100644
 +    // crash handler which we don't want counterintuitively setting this env
 +    // disables that handler
 +    qputenv("KDE_DEBUG", "1");
++    // Qt internally may load the xdg portal system early on, prevent this, we do not have a functional session running.
++    qputenv("QT_NO_XDG_DESKTOP_PORTAL", "1");
 +
 +    // Qt IM module
 +    if (!SDDM::mainConfig.InputMethod.get().isEmpty())
@@ -4584,7 +5178,7 @@ index bbce512..b300f31 100644
      QCommandLineParser parser;
      parser.setApplicationDescription(TR("SDDM greeter"));
 diff --git a/src/greeter/GreeterProxy.cpp b/src/greeter/GreeterProxy.cpp
-index 8fde3d9..415b37c 100644
+index 8fde3d9..6bd7dc3 100644
 --- a/src/greeter/GreeterProxy.cpp
 +++ b/src/greeter/GreeterProxy.cpp
 @@ -46,7 +46,7 @@ namespace SDDM {
@@ -4596,7 +5190,18 @@ index 8fde3d9..415b37c 100644
  
          // connect to server
          d->socket->connectToServer(socket);
-@@ -138,6 +138,8 @@ namespace SDDM {
+@@ -108,6 +108,10 @@ namespace SDDM {
+         SocketWriter(d->socket) << quint32(GreeterMessages::HybridSleep);
+     }
+ 
++    void GreeterProxy::sendKeyboardLayout(const QString &layout) {
++        SocketWriter(d->socket) << quint32(GreeterMessages::KeyboardLayout) << layout;
++    }
++
+     void GreeterProxy::login(const QString &user, const QString &password, const int sessionIndex) const {
+         if (!d->sessionModel) {
+             // log error
+@@ -138,6 +142,8 @@ namespace SDDM {
      void GreeterProxy::disconnected() {
          // log disconnection
          qDebug() << "Disconnected from the daemon.";
@@ -4605,7 +5210,7 @@ index 8fde3d9..415b37c 100644
      }
  
      void GreeterProxy::error() {
-@@ -203,6 +205,13 @@ namespace SDDM {
+@@ -203,6 +209,13 @@ namespace SDDM {
                      // emit signal
                      emit loginFailed();
                  }
@@ -4620,10 +5225,18 @@ index 8fde3d9..415b37c 100644
                  default: {
                      // log message
 diff --git a/src/greeter/GreeterProxy.h b/src/greeter/GreeterProxy.h
-index ba2533f..5ccdbb2 100644
+index ba2533f..3ca813f 100644
 --- a/src/greeter/GreeterProxy.h
 +++ b/src/greeter/GreeterProxy.h
-@@ -71,6 +71,7 @@ namespace SDDM {
+@@ -61,6 +61,7 @@ namespace SDDM {
+         void suspend();
+         void hibernate();
+         void hybridSleep();
++        void sendKeyboardLayout(const QString &layout);
+ 
+         void login(const QString &user, const QString &password, const int sessionIndex) const;
+ 
+@@ -71,6 +72,7 @@ namespace SDDM {
          void error();
  
      signals:
@@ -4631,7 +5244,7 @@ index ba2533f..5ccdbb2 100644
          void hostNameChanged(const QString &hostName);
          void canPowerOffChanged(bool canPowerOff);
          void canRebootChanged(bool canReboot);
-@@ -78,6 +79,7 @@ namespace SDDM {
+@@ -78,6 +80,7 @@ namespace SDDM {
          void canHibernateChanged(bool canHibernate);
          void canHybridSleepChanged(bool canHybridSleep);
  
@@ -4639,8 +5252,68 @@ index ba2533f..5ccdbb2 100644
          void loginFailed();
          void loginSucceeded();
  
+diff --git a/src/greeter/KeyboardBackend.cpp b/src/greeter/KeyboardBackend.cpp
+new file mode 100644
+index 0000000..5bb0c0c
+--- /dev/null
++++ b/src/greeter/KeyboardBackend.cpp
+@@ -0,0 +1,31 @@
++/***************************************************************************
++* Copyright (c) 2022 Aleix Pol Gonzalez <aleixpol@kde.org>
++*
++* This program is free software; you can redistribute it and/or modify
++* it under the terms of the GNU General Public License as published by
++* the Free Software Foundation; either version 2 of the License, or
++* (at your option) any later version.
++*
++* This program is distributed in the hope that it will be useful,
++* but WITHOUT ANY WARRANTY; without even the implied warranty of
++* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
++* GNU General Public License for more details.
++*
++* You should have received a copy of the GNU General Public License
++* along with this program; if not, write to the
++* Free Software Foundation, Inc.,
++* 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
++***************************************************************************/
++
++#include "KeyboardBackend.h"
++#include "KeyboardModel_p.h"
++
++namespace SDDM
++{
++
++void KeyboardBackend::setProxy(GreeterProxy* proxy)
++{
++    d->m_proxy = proxy;
++}
++
++}
+diff --git a/src/greeter/KeyboardBackend.h b/src/greeter/KeyboardBackend.h
+index 8950a32..cd303a4 100644
+--- a/src/greeter/KeyboardBackend.h
++++ b/src/greeter/KeyboardBackend.h
+@@ -20,7 +20,10 @@
+ #ifndef KEYBOARDBACKEND_H
+ #define KEYBOARDBACKEND_H
+ 
++#include <QObject>
++
+ namespace SDDM {
++    class GreeterProxy;
+     class KeyboardModel;
+     class KeyboardModelPrivate;
+ 
+@@ -29,6 +32,7 @@ namespace SDDM {
+         KeyboardBackend(KeyboardModelPrivate *kmp) : d(kmp) {}
+ 
+         virtual ~KeyboardBackend() {}
++        void setProxy(GreeterProxy *proxy);
+ 
+         virtual void init() = 0;
+         virtual void disconnect() = 0;
 diff --git a/src/greeter/KeyboardModel.cpp b/src/greeter/KeyboardModel.cpp
-index 7d40441..6ebfefb 100644
+index 7d40441..b4499fd 100644
 --- a/src/greeter/KeyboardModel.cpp
 +++ b/src/greeter/KeyboardModel.cpp
 @@ -1,4 +1,5 @@
@@ -4661,21 +5334,18 @@ index 7d40441..6ebfefb 100644
  #include "XcbKeyboardBackend.h"
  
  namespace SDDM {
-@@ -27,14 +31,21 @@ namespace SDDM {
+@@ -27,14 +31,20 @@ namespace SDDM {
      /**********************************************/
  
      KeyboardModel::KeyboardModel() : d(new KeyboardModelPrivate) {
 -        m_backend = new XcbKeyboardBackend(d);
--        m_backend->init();
--        m_backend->connectEventsDispatcher(this);
 +        if (QGuiApplication::platformName() == QLatin1String("xcb")) {
 +            m_backend = new XcbKeyboardBackend(d);
-+            m_backend->init();
-+            m_backend->connectEventsDispatcher(this);
 +        } else if (QGuiApplication::platformName().contains(QLatin1String("wayland"))) {
 +            m_backend = new WaylandKeyboardBackend(d);
-+            m_backend->init();
 +        }
+         m_backend->init();
+         m_backend->connectEventsDispatcher(this);
      }
  
      KeyboardModel::~KeyboardModel() {
@@ -4688,7 +5358,16 @@ index 7d40441..6ebfefb 100644
  
          for (QObject *layout: d->layouts) {
              delete layout;
-@@ -49,7 +60,8 @@ namespace SDDM {
+@@ -46,10 +56,17 @@ namespace SDDM {
+         return d->numlock.enabled;
+     }
+ 
++    void KeyboardModel::setProxy(SDDM::GreeterProxy* proxy)
++    {
++        m_backend->setProxy(proxy);
++    }
++
++
      void KeyboardModel::setNumLockState(bool state) {
          if (d->numlock.enabled != state) {
              d->numlock.enabled = state;
@@ -4698,7 +5377,7 @@ index 7d40441..6ebfefb 100644
  
              emit numLockStateChanged();
          }
-@@ -62,7 +74,8 @@ namespace SDDM {
+@@ -62,7 +79,8 @@ namespace SDDM {
      void KeyboardModel::setCapsLockState(bool state) {
          if (d->capslock.enabled != state) {
              d->capslock.enabled = state;
@@ -4708,7 +5387,7 @@ index 7d40441..6ebfefb 100644
  
              emit capsLockStateChanged();
          }
-@@ -79,7 +92,8 @@ namespace SDDM {
+@@ -79,7 +97,8 @@ namespace SDDM {
      void KeyboardModel::setCurrentLayout(int id) {
          if (d->layout_id != id) {
              d->layout_id = id;
@@ -4718,7 +5397,7 @@ index 7d40441..6ebfefb 100644
  
              emit currentLayoutChanged();
          }
-@@ -96,7 +110,8 @@ namespace SDDM {
+@@ -96,7 +115,8 @@ namespace SDDM {
          QList<QObject*> layouts_old = d->layouts;
  
          // Process events
@@ -4729,15 +5408,53 @@ index 7d40441..6ebfefb 100644
          // Send updates
          if (caps_old != d->capslock.enabled)
 diff --git a/src/greeter/KeyboardModel.h b/src/greeter/KeyboardModel.h
-index ca57849..26cb4d4 100644
+index ca57849..296edc3 100644
 --- a/src/greeter/KeyboardModel.h
 +++ b/src/greeter/KeyboardModel.h
-@@ -71,7 +71,7 @@ namespace SDDM {
+@@ -25,6 +25,7 @@
+ #include <QString>
+ 
+ namespace SDDM {
++    class GreeterProxy;
+     class KeyboardModelPrivate;
+     class KeyboardBackend;
+ 
+@@ -46,6 +47,8 @@ namespace SDDM {
+         KeyboardModel();
+         virtual ~KeyboardModel();
+ 
++        void setProxy(GreeterProxy *proxy);
++
+     signals:
+         void numLockStateChanged();
+         void capsLockStateChanged();
+@@ -71,7 +74,7 @@ namespace SDDM {
  
      private:
          KeyboardModelPrivate * d { nullptr };
 -        KeyboardBackend * m_backend;
 +        KeyboardBackend * m_backend = nullptr;
+     };
+ }
+ 
+diff --git a/src/greeter/KeyboardModel_p.h b/src/greeter/KeyboardModel_p.h
+index 1a181c2..8f67c1e 100644
+--- a/src/greeter/KeyboardModel_p.h
++++ b/src/greeter/KeyboardModel_p.h
+@@ -23,6 +23,8 @@
+ #include <QtCore/QObject>
+ 
+ namespace SDDM {
++    class GreeterProxy;
++
+     struct Indicator {
+         bool enabled { false };
+         uint8_t mask { 0 };
+@@ -39,6 +41,7 @@ namespace SDDM {
+         // Layouts
+         int layout_id { 0 };
+         QList<QObject*> layouts;
++        GreeterProxy *m_proxy = nullptr;
      };
  }
  
@@ -4754,10 +5471,18 @@ index 16284f2..1771e0b 100644
          ScreenModel(QScreen *screen, QObject *parent = 0);
          ~ScreenModel();
 diff --git a/src/greeter/SessionModel.cpp b/src/greeter/SessionModel.cpp
-index 1953c76..a0eb3b1 100644
+index 1953c76..92f6d1a 100644
 --- a/src/greeter/SessionModel.cpp
 +++ b/src/greeter/SessionModel.cpp
-@@ -35,6 +35,7 @@ namespace SDDM {
+@@ -22,6 +22,7 @@
+ 
+ #include "Configuration.h"
+ 
++#include <QFileInfo>
+ #include <QVector>
+ #include <QProcessEnvironment>
+ #include <QFileSystemWatcher>
+@@ -35,22 +36,31 @@ namespace SDDM {
          }
  
          int lastIndex { 0 };
@@ -4765,15 +5490,33 @@ index 1953c76..a0eb3b1 100644
          QVector<Session *> sessions;
      };
  
-@@ -50,6 +51,7 @@ namespace SDDM {
+     SessionModel::SessionModel(QObject *parent) : QAbstractListModel(parent), d(new SessionModelPrivate()) {
++        // Check for flag to show Wayland sessions
++        bool dri_active = QFileInfo::exists(QStringLiteral("/dev/dri"));
++
+         // initial population
+         beginResetModel();
+-        populate(Session::WaylandSession, mainConfig.Wayland.SessionDir.get());
++        if (dri_active)
++            populate(Session::WaylandSession, mainConfig.Wayland.SessionDir.get());
+         populate(Session::X11Session, mainConfig.X11.SessionDir.get());
+         endResetModel();
+ 
+         // refresh everytime a file is changed, added or removed
+         QFileSystemWatcher *watcher = new QFileSystemWatcher(this);
          connect(watcher, &QFileSystemWatcher::directoryChanged, [this](const QString &path) {
++            // Recheck for flag to show Wayland sessions
++            bool dri_active = QFileInfo::exists(QStringLiteral("/dev/dri"));
              beginResetModel();
              d->sessions.clear();
+-            populate(Session::WaylandSession, mainConfig.Wayland.SessionDir.get());
 +            d->displayNames.clear();
-             populate(Session::WaylandSession, mainConfig.Wayland.SessionDir.get());
++            if (dri_active)
++                populate(Session::WaylandSession, mainConfig.Wayland.SessionDir.get());
              populate(Session::X11Session, mainConfig.X11.SessionDir.get());
              endResetModel();
-@@ -99,6 +101,8 @@ namespace SDDM {
+         });
+@@ -99,6 +109,8 @@ namespace SDDM {
          case TypeRole:
              return session->type();
          case NameRole:
@@ -4782,7 +5525,7 @@ index 1953c76..a0eb3b1 100644
              return session->displayName();
          case ExecRole:
              return session->exec();
-@@ -144,10 +148,12 @@ namespace SDDM {
+@@ -144,10 +156,12 @@ namespace SDDM {
                  }
              }
              // add to sessions list
@@ -4870,12 +5613,15 @@ index 7d9c6f7..0a2ab9c 100644
      Background {
 diff --git a/src/greeter/waylandkeyboardbackend.cpp b/src/greeter/waylandkeyboardbackend.cpp
 new file mode 100644
-index 0000000..15c580e
+index 0000000..0f26251
 --- /dev/null
 +++ b/src/greeter/waylandkeyboardbackend.cpp
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,120 @@
 +/***************************************************************************
 +* Copyright (c) 2021 Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
++* SPDX-FileCopyrightText: 2010 Andriy Rysin <rysin@kde.org>
++* SPDX-FileCopyrightText: 2022 Aleix Pol Gonzalez <aleixpol@kde.org>
++* SPDX-FileCopyrightText: 2022 Volker Krause <vkrause>
 +*
 +* This program is free software; you can redistribute it and/or modify
 +* it under the terms of the GNU General Public License as published by
@@ -4894,11 +5640,16 @@ index 0000000..15c580e
 +***************************************************************************/
 +
 +#include <QDir>
++#include <QDebug>
++#include <QGuiApplication>
++#include <QInputMethod>
 +
++#include "GreeterProxy.h"
 +#include "KeyboardModel.h"
 +#include "KeyboardModel_p.h"
 +#include "KeyboardLayout.h"
 +#include "waylandkeyboardbackend.h"
++#include <qxmlstream.h>
 +
 +namespace SDDM {
 +
@@ -4911,14 +5662,54 @@ index 0000000..15c580e
 +{
 +}
 +
++QList<QObject *> parseRules(const QString &filename, int &current)
++{
++    QFile file(filename);
++    qDebug() << "Parsing xkb rules from" << file.fileName();
++    if (!file.open(QFile::ReadOnly | QFile::Text)) {
++        qWarning() << "Cannot open the rules file" << file.fileName();
++        return {};
++    }
++
++    QList<QObject *> layouts;
++
++    QString lastName, lastDescription;
++
++    QStringList path;
++    QXmlStreamReader reader(&file);
++    while (!reader.atEnd()) {
++        const auto token = reader.readNext();
++        if (token == QXmlStreamReader::StartElement) {
++            path << reader.name().toString();
++            QString strPath = path.join(QLatin1String("/"));
++
++            if (strPath.endsWith(QLatin1String("layoutList/layout/configItem/name"))) {
++                lastName = reader.readElementText().trimmed();
++            } else if (strPath.endsWith(QLatin1String("layoutList/layout/configItem/description"))) {
++                // TODO: This should be translated using i18nd("xkeyboard-config", lastDescription)
++                lastDescription = reader.readElementText().trimmed();
++            }
++        }
++        // don't use token here, readElementText() above can have moved us forward meanwhile
++        if (reader.tokenType() == QXmlStreamReader::EndElement) {
++            const QString strPath = path.join(QLatin1String("/"));
++            if (strPath.endsWith(QLatin1String("layoutList/layout/configItem/description"))) {
++                layouts << new KeyboardLayout(lastName, lastDescription);
++            }
++            path.removeLast();
++        }
++    }
++
++    if (reader.hasError()) {
++        qWarning() << "Failed to parse the rules file" << file.fileName();
++        return {};
++    }
++    return layouts;
++}
++
 +void WaylandKeyboardBackend::init()
 +{
-+    d->layouts.clear();
-+
-+    QDir dir(QStringLiteral("/usr/share/X11/xkb/symbols"));
-+    auto entries = dir.entryList(QDir::Files);
-+    for (const auto &entry : qAsConst(entries))
-+        d->layouts << new KeyboardLayout(entry, entry);
++    d->layouts = parseRules(QStringLiteral("/usr/share/X11/xkb/rules/evdev.xml"), d->layout_id);
 +}
 +
 +void WaylandKeyboardBackend::disconnect()
@@ -4927,6 +5718,13 @@ index 0000000..15c580e
 +
 +void WaylandKeyboardBackend::sendChanges()
 +{
++    if (!d->m_proxy || !m_model) {
++        qWarning() << "KeyboardModel's proxy is not set";
++        return;
++    }
++
++    auto nextLayout = static_cast<KeyboardLayout *>(d->layouts[m_model->currentLayout()])->shortName();
++    d->m_proxy->sendKeyboardLayout(nextLayout);
 +}
 +
 +void WaylandKeyboardBackend::dispatchEvents()
@@ -4935,16 +5733,16 @@ index 0000000..15c580e
 +
 +void WaylandKeyboardBackend::connectEventsDispatcher(KeyboardModel *model)
 +{
-+    Q_UNUSED(model);
++    m_model = model;
 +}
 +
 +} // namespace SDDM
 diff --git a/src/greeter/waylandkeyboardbackend.h b/src/greeter/waylandkeyboardbackend.h
 new file mode 100644
-index 0000000..1ab4348
+index 0000000..d404b0e
 --- /dev/null
 +++ b/src/greeter/waylandkeyboardbackend.h
-@@ -0,0 +1,43 @@
+@@ -0,0 +1,48 @@
 +/***************************************************************************
 +* Copyright (c) 2021 Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 +*
@@ -4969,6 +5767,8 @@ index 0000000..1ab4348
 +
 +#include "KeyboardBackend.h"
 +
++class GreeterProxy;
++
 +namespace SDDM {
 +
 +class WaylandKeyboardBackend : public KeyboardBackend
@@ -4983,6 +5783,9 @@ index 0000000..1ab4348
 +    void dispatchEvents() override;
 +
 +    void connectEventsDispatcher(KeyboardModel *model) override;
++
++private:
++    KeyboardModel *m_model = nullptr;
 +};
 +
 +} // namespace SDDM
@@ -5279,10 +6082,10 @@ index 3742df1..0e8c02a 100644
      private slots:
 diff --git a/src/helper/HelperStartWayland.cpp b/src/helper/HelperStartWayland.cpp
 new file mode 100644
-index 0000000..1ee103d
+index 0000000..a7cf735
 --- /dev/null
 +++ b/src/helper/HelperStartWayland.cpp
-@@ -0,0 +1,67 @@
+@@ -0,0 +1,72 @@
 +/*
 + * Session process wrapper
 + * Copyright (C) 2021 Aleix Pol Gonzalez <aleixpol@kde.org>
@@ -5311,9 +6114,11 @@ index 0000000..1ee103d
 +#include <unistd.h>
 +#include <QCoreApplication>
 +#include <QTextStream>
++#include <QDebug>
 +#include "waylandhelper.h"
 +#include "MessageHandler.h"
 +#include <signal.h>
++#include "Auth.h"
 +#include "SignalHandler.h"
 +
 +void WaylandHelperMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
@@ -5323,36 +6128,39 @@ index 0000000..1ee103d
 +int main(int argc, char** argv)
 +{
 +    qInstallMessageHandler(WaylandHelperMessageHandler);
-+    SDDM::SignalHandler s;
 +    QCoreApplication app(argc, argv);
-+    QObject::connect(&s, &SDDM::SignalHandler::sigtermReceived, &app, [] {
-+        QCoreApplication::instance()->exit(-1);
-+    });
++    using namespace SDDM;
++    SDDM::SignalHandler s;
 +
 +    Q_ASSERT(::getuid() != 0);
 +    if (argc != 3) {
 +        QTextStream(stderr) << "Wrong number of arguments\n";
-+        return 1;
++        return Auth::HELPER_OTHER_ERROR;
 +    }
 +
-+    using namespace SDDM;
 +    WaylandHelper helper;
++    QObject::connect(&s, &SDDM::SignalHandler::sigtermReceived, &app, [] {
++        QCoreApplication::exit(0);
++    });
 +    QObject::connect(&app, &QCoreApplication::aboutToQuit, &helper, [&helper] {
 +        qDebug("quitting helper-start-wayland");
 +        helper.stop();
 +    });
 +    QObject::connect(&helper, &WaylandHelper::failed, &app, [&app] {
 +        QTextStream(stderr) << "Failed to start wayland session" << Qt::endl;
-+        app.exit(2);
++        app.exit(Auth::HELPER_SESSION_ERROR);
 +    });
 +
-+    helper.startCompositor(app.arguments()[1]);
++    if (!helper.startCompositor(app.arguments()[1])) {
++        qWarning() << "SDDM was unable to start" << app.arguments()[1];
++        return Auth::HELPER_DISPLAYSERVER_ERROR;
++    }
 +    helper.startGreeter(app.arguments()[2]);
 +    return app.exec();
 +}
 diff --git a/src/helper/HelperStartX11User.cpp b/src/helper/HelperStartX11User.cpp
 new file mode 100644
-index 0000000..1af6e6a
+index 0000000..d77b78c
 --- /dev/null
 +++ b/src/helper/HelperStartX11User.cpp
 @@ -0,0 +1,76 @@
@@ -5398,8 +6206,8 @@ index 0000000..1af6e6a
 +int main(int argc, char** argv)
 +{
 +    qInstallMessageHandler(X11UserHelperMessageHandler);
-+    SDDM::SignalHandler s;
 +    QCoreApplication app(argc, argv);
++    SDDM::SignalHandler s;
 +    QObject::connect(&s, &SDDM::SignalHandler::sigtermReceived, &app, [] {
 +        QCoreApplication::instance()->exit(-1);
 +    });
@@ -5413,7 +6221,7 @@ index 0000000..1af6e6a
 +    using namespace SDDM;
 +    XOrgUserHelper helper;
 +    QObject::connect(&app, &QCoreApplication::aboutToQuit, &helper, [&helper] {
-+        qDebug("quitting helper-start-wayland");
++        qDebug("quitting helper-start-x11");
 +        helper.stop();
 +    });
 +    QObject::connect(&helper, &XOrgUserHelper::displayChanged, &app, [&helper, &app] {
@@ -5433,7 +6241,7 @@ index 0000000..1af6e6a
 +    return app.exec();
 +}
 diff --git a/src/helper/UserSession.cpp b/src/helper/UserSession.cpp
-index c9a8a20..4d29efc 100644
+index c9a8a20..39ff9ad 100644
 --- a/src/helper/UserSession.cpp
 +++ b/src/helper/UserSession.cpp
 @@ -19,10 +19,13 @@
@@ -5450,7 +6258,7 @@ index c9a8a20..4d29efc 100644
  
  #include <sys/types.h>
  #include <sys/ioctl.h>
-@@ -34,34 +37,92 @@
+@@ -34,34 +37,98 @@
  #include <unistd.h>
  #include <fcntl.h>
  #include <sched.h>
@@ -5484,11 +6292,13 @@ index c9a8a20..4d29efc 100644
 +            qInfo() << "Starting X11 session:" << m_displayServerCmd << command;
 +            if (m_displayServerCmd.isEmpty()) {
 +                auto args = QProcess::splitCommand(command);
-+                const auto program = args.takeFirst();
-+                QProcess::start(program, args);
++                setProgram(args.takeFirst());
++                setArguments(args);
 +            } else {
-+                QProcess::start(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-x11user"), {m_displayServerCmd, command});
++                setProgram(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-x11user"));
++                setArguments({m_displayServerCmd, command});
 +            }
++            QProcess::start();
  
 -    bool UserSession::start() {
 -        QProcessEnvironment env = qobject_cast<HelperApp*>(parent())->session()->processEnvironment();
@@ -5505,12 +6315,15 @@ index c9a8a20..4d29efc 100644
 -            QProcess::start(cmd);
 +            if (env.value(QStringLiteral("XDG_SESSION_CLASS")) == QLatin1String("greeter")) {
 +                Q_ASSERT(!m_displayServerCmd.isEmpty());
-+                QProcess::start(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-wayland"), {m_displayServerCmd, m_path});
++                setProgram(QStringLiteral(LIBEXEC_INSTALL_DIR "/sddm-helper-start-wayland"));
++                setArguments({m_displayServerCmd, m_path});
++                QProcess::start();
 +                isWaylandGreeter = true;
 +            } else {
-+                const QString cmd = QStringLiteral("%1 %2").arg(mainConfig.Wayland.SessionCommand.get()).arg(m_path);
-+                qInfo() << "Starting Wayland user session:" << cmd;
-+                QProcess::start(mainConfig.Wayland.SessionCommand.get(), QStringList{m_path});
++                setProgram(mainConfig.Wayland.SessionCommand.get());
++                setArguments(QStringList{m_path});
++                qInfo() << "Starting Wayland user session:" << program() << m_path;
++                QProcess::start();
 +                closeWriteChannel();
 +                closeReadChannel(QProcess::StandardOutput);
 +            }
@@ -5544,8 +6357,9 @@ index c9a8a20..4d29efc 100644
 +                    qWarning() << "Could not fully finish the process" << program();
 +                }
 +            }
++        } else {
++            Q_EMIT finished(Auth::HELPER_OTHER_ERROR);
 +        }
-+        Q_EMIT finished(Auth::HELPER_OTHER_ERROR);
 +    }
 +
 +    QString UserSession::displayServerCommand() const
@@ -5559,7 +6373,7 @@ index c9a8a20..4d29efc 100644
      }
  
      void UserSession::setPath(const QString& path) {
-@@ -75,10 +136,14 @@ namespace SDDM {
+@@ -75,10 +142,14 @@ namespace SDDM {
      void UserSession::setupChildProcess() {
          // Session type
          QString sessionType = processEnvironment().value(QStringLiteral("XDG_SESSION_TYPE"));
@@ -5578,7 +6392,7 @@ index c9a8a20..4d29efc 100644
              // open VT and get the fd
              int vtNumber = processEnvironment().value(QStringLiteral("XDG_VTNR")).toInt();
              QString ttyString = QStringLiteral("/dev/tty%1").arg(vtNumber);
-@@ -107,12 +172,13 @@ namespace SDDM {
+@@ -107,12 +178,13 @@ namespace SDDM {
              // take control of the tty
              if (takeControl) {
                  if (ioctl(STDIN_FILENO, TIOCSCTTY) < 0) {
@@ -5594,7 +6408,7 @@ index c9a8a20..4d29efc 100644
          }
  
  #ifdef Q_OS_LINUX
-@@ -140,8 +206,10 @@ namespace SDDM {
+@@ -140,8 +212,10 @@ namespace SDDM {
          if (bufsize == -1)
              bufsize = 16384;
          QScopedPointer<char, QScopedPointerPodDeleter> buffer(static_cast<char*>(malloc(bufsize)));
@@ -5606,7 +6420,7 @@ index c9a8a20..4d29efc 100644
          int err = getpwnam_r(username.constData(), &pw, buffer.data(), bufsize, &rpw);
          if (rpw == NULL) {
              if (err == 0)
-@@ -150,10 +218,19 @@ namespace SDDM {
+@@ -150,10 +224,19 @@ namespace SDDM {
                  qCritical() << "getpwnam_r(" << username << ") failed with error: " << strerror(err);
              exit(Auth::HELPER_OTHER_ERROR);
          }
@@ -5626,7 +6440,7 @@ index c9a8a20..4d29efc 100644
  
  #ifdef USE_PAM
  
-@@ -175,13 +252,13 @@ namespace SDDM {
+@@ -175,13 +258,13 @@ namespace SDDM {
          // fetch session's user's groups
          int n_user_groups = 0;
          gid_t *user_groups = NULL;
@@ -5643,7 +6457,7 @@ index c9a8a20..4d29efc 100644
                              << ") failed";
                  exit(Auth::HELPER_OTHER_ERROR);
              }
-@@ -219,86 +296,65 @@ namespace SDDM {
+@@ -219,86 +302,65 @@ namespace SDDM {
              qCritical() << "setuid(" << pw.pw_uid << ") failed for user: " << username;
              exit(Auth::HELPER_OTHER_ERROR);
          }
