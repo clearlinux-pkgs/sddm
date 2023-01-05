@@ -4,7 +4,7 @@
 #
 Name     : sddm
 Version  : 0.19.0
-Release  : 24
+Release  : 25
 URL      : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source0  : https://github.com/sddm/sddm/releases/download/v0.19.0/sddm-0.19.0.tar.xz
 Source1  : sddm.tmpfiles
@@ -30,6 +30,9 @@ BuildRequires : pkgconfig(systemd)
 BuildRequires : pkgconfig(xcb)
 BuildRequires : pkgconfig(xcb-xkb)
 BuildRequires : qtbase-dev mesa-dev
+# Suppress stripping binaries
+%define __strip /bin/true
+%define debug_package %{nil}
 Patch1: update-from-git.patch
 Patch2: 0001-Install-the-PAM-config-files-where-Clear-expects-the.patch
 Patch3: 0002-sddm.pam-Update-system-login-to-login.patch
@@ -137,24 +140,24 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1663083119
+export SOURCE_DATE_EPOCH=1672883162
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
-export CFLAGS="$CFLAGS -fno-lto "
-export FCFLAGS="$FFLAGS -fno-lto "
-export FFLAGS="$FFLAGS -fno-lto "
-export CXXFLAGS="$CXXFLAGS -fno-lto "
+export CFLAGS="$CFLAGS -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz "
+export FCFLAGS="$FFLAGS -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz "
+export FFLAGS="$FFLAGS -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz "
+export CXXFLAGS="$CXXFLAGS -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz "
 %cmake .. -DUID_MIN=1000 -DUID_MAX=60000 -DDBUS_CONFIG_FILENAME=sddm_org.fredesktop.DisplayManager.conf -DCURRENT_THEME=breeze -DINPUT_METHOD=""
 make  %{?_smp_mflags}
 popd
 mkdir -p clr-build-avx2
 pushd clr-build-avx2
 export GCC_IGNORE_WERROR=1
-export CFLAGS="$CFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -msse2avx -mtune=skylake "
-export FCFLAGS="$FFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -msse2avx -mtune=skylake "
-export FFLAGS="$FFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -msse2avx -mtune=skylake "
-export CXXFLAGS="$CXXFLAGS -O3 -Wl,-z,x86-64-v3 -fno-lto -march=x86-64-v3 -msse2avx -mtune=skylake "
+export CFLAGS="$CFLAGS -O3 -Wl,-z,x86-64-v3 -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz -march=x86-64-v3 "
+export FCFLAGS="$FFLAGS -O3 -Wl,-z,x86-64-v3 -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz -march=x86-64-v3 "
+export FFLAGS="$FFLAGS -O3 -Wl,-z,x86-64-v3 -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz -march=x86-64-v3 "
+export CXXFLAGS="$CXXFLAGS -O3 -Wl,-z,x86-64-v3 -fdebug-types-section -femit-struct-debug-baseonly -fno-lto -g1 -gno-column-info -gno-variable-location-views -gz -march=x86-64-v3 "
 export CFLAGS="$CFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
 export CXXFLAGS="$CXXFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
 export FFLAGS="$FFLAGS -march=x86-64-v3 -m64 -Wl,-z,x86-64-v3"
@@ -173,7 +176,7 @@ cd ../clr-build-avx2;
 make test || :
 
 %install
-export SOURCE_DATE_EPOCH=1663083119
+export SOURCE_DATE_EPOCH=1672883162
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp %{_builddir}/sddm-%{version}/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa || :
