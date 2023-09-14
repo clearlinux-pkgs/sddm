@@ -1,0 +1,37 @@
+From 5e523e1cbaf861375915c43fced566edd298f243 Mon Sep 17 00:00:00 2001
+From: William Douglas <william.douglas@intel.com>
+Date: Thu, 14 Sep 2023 13:09:31 -0700
+Subject: [PATCH 2/2] Update system-login to login for pam file
+
+Signed-off-by: William Douglas <william.douglas@intel.com>
+---
+ services/sddm.pam | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/services/sddm.pam b/services/sddm.pam
+index df11003..5087920 100644
+--- a/services/sddm.pam
++++ b/services/sddm.pam
+@@ -1,15 +1,15 @@
+ #%PAM-1.0
+ 
+-auth        include     system-login
++auth        include     login
+ -auth       optional    pam_gnome_keyring.so
+ -auth       optional    pam_kwallet5.so
+ 
+-account     include     system-login
++account     include     login
+ 
+-password    include     system-login
++password    include     login
+ -password   optional    pam_gnome_keyring.so    use_authtok
+ 
+ session     optional    pam_keyinit.so          force revoke
+-session     include     system-login
++session     include     login
+ -session    optional    pam_gnome_keyring.so    auto_start
+ -session    optional    pam_kwallet5.so         auto_start
+-- 
+2.42.0
+
