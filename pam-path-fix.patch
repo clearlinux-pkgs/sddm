@@ -1,0 +1,19 @@
+--- sddm-0.21.0/services/CMakeLists.txt~	2024-02-26 10:23:03.000000000 +0000
++++ sddm-0.21.0/services/CMakeLists.txt	2024-04-16 15:03:54.517042123 +0000
+@@ -30,12 +30,12 @@
+         install(FILES freebsd.sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
+     else()
+         if(HAVE_PAM_FAILLOCK)
+-           install(FILES sddm-autologin.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
++           install(FILES sddm-autologin.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
+         else()
+-           install(FILES sddm-autologin-tally2.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
++           install(FILES sddm-autologin-tally2.pam DESTINATION /usr/share/pam.d RENAME sddm-autologin)
+         endif()
+ 
+-        install(FILES sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
+-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-greeter)
++        install(FILES sddm.pam DESTINATION /usr/share/pam.d RENAME sddm)
++        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION /usr/share/pam.d RENAME sddm-greeter)
+     endif()
+ endif()

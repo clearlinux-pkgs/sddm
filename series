@@ -3,3 +3,4 @@
 #0003-Allow-cmake-to-change-default-theme-and-InputMethod.patch
 #0004-Stateless-Make-session-scripts-usr-share-defaults-et.patch
 0005-autologin.pam-Use-login-instead-of-system-login.patch
+pam-path-fix.patch
