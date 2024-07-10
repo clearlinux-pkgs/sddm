@@ -726,6 +726,21 @@ diff --git a/data/flags/bd.png b/data/flags/bd.png
 new file mode 100644
 index 0000000..b516bb7
 Binary files /dev/null and b/data/flags/bd.png differ
+diff --git a/data/interfaces/org.freedesktop.login1.Manager.xml b/data/interfaces/org.freedesktop.login1.Manager.xml
+index 800d2bc..0a63f7f 100644
+--- a/data/interfaces/org.freedesktop.login1.Manager.xml
++++ b/data/interfaces/org.freedesktop.login1.Manager.xml
+@@ -185,6 +185,10 @@
+    <arg type="s" direction="in"/>
+    <arg type="h" direction="out"/>
+   </method>
++  <signal name="SecureAttentionKey">
++   <arg type="s"/>
++   <arg type="o"/>
++  </signal>
+   <signal name="SessionNew">
+    <arg type="s"/>
+    <arg type="o"/>
 diff --git a/data/interfaces/org.freedesktop.login1.Seat.xml b/data/interfaces/org.freedesktop.login1.Seat.xml
 index a726b95..a73a6b3 100644
 --- a/data/interfaces/org.freedesktop.login1.Seat.xml
@@ -6219,10 +6234,19 @@ index bf22566..3cfdfdb 100644
  }
  
 diff --git a/src/daemon/SeatManager.cpp b/src/daemon/SeatManager.cpp
-index 60d22ea..bd207e6 100644
+index 60d22ea..26a3ade 100644
 --- a/src/daemon/SeatManager.cpp
 +++ b/src/daemon/SeatManager.cpp
-@@ -34,7 +34,7 @@ namespace SDDM {
+@@ -27,6 +27,8 @@
+ #include <QDBusPendingReply>
+ #include <QDBusContext>
+ 
++#include <Login1Manager.h>
++#include <Login1Session.h>
+ #include "LogindDBusTypes.h"
+ 
+ namespace SDDM {
+@@ -34,7 +36,7 @@ namespace SDDM {
      class LogindSeat : public QObject {
      Q_OBJECT
      public:
@@ -6231,7 +6255,7 @@ index 60d22ea..bd207e6 100644
          QString name() const;
          bool canGraphical() const;
      Q_SIGNALS:
-@@ -46,7 +46,7 @@ namespace SDDM {
+@@ -46,7 +48,7 @@ namespace SDDM {
          bool m_canGraphical;
      };
  
@@ -6240,12 +6264,45 @@ index 60d22ea..bd207e6 100644
          m_name(name),
          m_canGraphical(false)
      {
-@@ -149,12 +149,12 @@ namespace SDDM {
+@@ -113,6 +115,7 @@ namespace SDDM {
+             }
+         });
+ 
++        QDBusConnection::systemBus().connect(Logind::serviceName(), Logind::managerPath(), Logind::managerIfaceName(), QStringLiteral("SecureAttentionKey"), this, SLOT(logindSecureAttentionKey(QString,QDBusObjectPath)));
+         QDBusConnection::systemBus().connect(Logind::serviceName(), Logind::managerPath(), Logind::managerIfaceName(), QStringLiteral("SeatNew"), this, SLOT(logindSeatAdded(QString,QDBusObjectPath)));
+         QDBusConnection::systemBus().connect(Logind::serviceName(), Logind::managerPath(), Logind::managerIfaceName(), QStringLiteral("SeatRemoved"), this, SLOT(logindSeatRemoved(QString,QDBusObjectPath)));
+     }
+@@ -148,13 +151,37 @@ namespace SDDM {
+         if (!m_seats.contains(name))
              return;
  
++        // Switch to existing greeter session if available
++        if (Logind::isAvailable()) {
++            OrgFreedesktopLogin1ManagerInterface manager(Logind::serviceName(), Logind::managerPath(), QDBusConnection::systemBus());
++            auto reply = manager.ListSessions();
++            reply.waitForFinished();
++
++            const auto info = reply.value();
++            for(const SessionInfo &s : reply.value()) {
++                if (s.userName == QLatin1String("sddm")) {
++                    OrgFreedesktopLogin1SessionInterface session(Logind::serviceName(), s.sessionPath.path(), QDBusConnection::systemBus());
++                    if (session.service() == QLatin1String("sddm-greeter") && session.seat().name == name) {
++                        session.Activate();
++                        return;
++                    }
++                }
++            }
++        }
++
          // switch to greeter
 -        m_seats.value(name)->createDisplay();
 +        m_seats.value(name)->createDisplay(Display::defaultDisplayServerType());
++    }
++
++    void SDDM::SeatManager::logindSecureAttentionKey(const QString& name, const QDBusObjectPath& objectPath)
++    {
++        Q_UNUSED(objectPath);
++        daemonApp->seatManager()->switchToGreeter(name);
      }
  
      void SDDM::SeatManager::logindSeatAdded(const QString& name, const QDBusObjectPath& objectPath)
@@ -6255,6 +6312,18 @@ index 60d22ea..bd207e6 100644
          connect(logindSeat, &LogindSeat::canGraphicalChanged, this, [=]() {
              if (logindSeat->canGraphical()) {
                  createSeat(logindSeat->name());
+diff --git a/src/daemon/SeatManager.h b/src/daemon/SeatManager.h
+index b2f9796..e1a5949 100644
+--- a/src/daemon/SeatManager.h
++++ b/src/daemon/SeatManager.h
+@@ -43,6 +43,7 @@ namespace SDDM {
+         void seatRemoved(const QString &name);
+ 
+     private Q_SLOTS:
++        void logindSecureAttentionKey(const QString &name, const QDBusObjectPath &objectPath);
+         void logindSeatAdded(const QString &name, const QDBusObjectPath &objectPath);
+         void logindSeatRemoved(const QString &name, const QDBusObjectPath &objectPath);
+ 
 diff --git a/src/daemon/SocketServer.cpp b/src/daemon/SocketServer.cpp
 index bcc56fe..488f9a5 100644
 --- a/src/daemon/SocketServer.cpp
