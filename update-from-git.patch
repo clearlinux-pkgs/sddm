@@ -143,7 +143,7 @@ index 5d70019..043f389 100644
 +        env:
 +          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e52e0e9..4e84543 100644
+index e52e0e9..690ee70 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -1,4 +1,4 @@
@@ -286,7 +286,7 @@ index e52e0e9..4e84543 100644
      set(HALT_COMMAND "/usr/bin/loginctl poweroff")
      set(REBOOT_COMMAND "/usr/bin/loginctl reboot")
  endif()
-@@ -171,21 +155,25 @@ if (NOT ELOGIND_FOUND AND NOT SYSTEMD_FOUND)
+@@ -171,21 +155,28 @@ if (NOT ELOGIND_FOUND AND NOT SYSTEMD_FOUND)
      # commands for shutdown and reboot. On FreeBSD, there are
      # normally more getty's running than on Linux.
      if("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
@@ -305,6 +305,9 @@ index e52e0e9..4e84543 100644
 +    set(RUNTIME_DIR_DEFAULT "${CMAKE_INSTALL_FULL_LOCALSTATEDIR}/run/sddm")
 +endif()
 +
++# utmps
++find_package(utmps)
++add_feature_info("utmps" UTMPS_FOUND "utmps support")
  
  # Set constants
  set(DATA_INSTALL_DIR            "${CMAKE_INSTALL_FULL_DATADIR}/sddm"                CACHE PATH      "System application data install directory")
@@ -316,7 +319,7 @@ index e52e0e9..4e84543 100644
  set(QML_INSTALL_DIR             "${QT_IMPORTS_DIR}"                                 CACHE PATH      "QML component installation directory")
  
  set(SESSION_COMMAND             "${DATA_INSTALL_DIR}/scripts/Xsession"              CACHE PATH      "Script to execute when starting the X11 desktop session")
-@@ -193,10 +181,12 @@ set(WAYLAND_SESSION_COMMAND     "${DATA_INSTALL_DIR}/scripts/wayland-session"
+@@ -193,10 +184,12 @@ set(WAYLAND_SESSION_COMMAND     "${DATA_INSTALL_DIR}/scripts/wayland-session"
  
  set(CONFIG_FILE                 "${CMAKE_INSTALL_FULL_SYSCONFDIR}/sddm.conf"        CACHE PATH      "Path of the sddm config file")
  set(CONFIG_DIR                  "${CMAKE_INSTALL_FULL_SYSCONFDIR}/sddm.conf.d"      CACHE PATH      "Path of the sddm config directory")
@@ -460,6 +463,24 @@ index f209c0b..a64680b 100644
  
  if (PAM_INCLUDE_DIR AND PAM_LIBRARY)
  	set(PAM_FOUND TRUE)
+diff --git a/cmake/Findutmps.cmake b/cmake/Findutmps.cmake
+new file mode 100644
+index 0000000..0661875
+--- /dev/null
++++ b/cmake/Findutmps.cmake
+@@ -0,0 +1,12 @@
++# - Try to find utmps and its dependencies
++# Once done this will define
++# UTMPS_FOUND - system has utmps and dependencies
++# UTMPS_INCLUDE_DIR - the utmps include dir
++# UTMPS_LIBRARIES - libutmps
++
++find_path(UTMPS_INCLUDE_DIR NAMES utmps/utmpx.h)
++find_library(UTMPS_LIBRARIES utmps)
++
++if (UTMPS_INCLUDE_DIR AND UTMPS_LIBRARIES)
++    set(UTMPS_FOUND TRUE)
++endif (UTMPS_INCLUDE_DIR AND UTMPS_LIBRARIES)
 diff --git a/cmake/cmake_uninstall.cmake.in b/cmake/cmake_uninstall.cmake.in
 deleted file mode 100644
 index c6d8094..0000000
@@ -8316,7 +8337,7 @@ index b790e00..915d09c 100644
      };
  }
 diff --git a/src/helper/CMakeLists.txt b/src/helper/CMakeLists.txt
-index 8914ea7..9ec6cac 100644
+index 8914ea7..f235a2c 100644
 --- a/src/helper/CMakeLists.txt
 +++ b/src/helper/CMakeLists.txt
 @@ -3,6 +3,7 @@ include(CheckLibraryExists)
@@ -8382,10 +8403,15 @@ index 8914ea7..9ec6cac 100644
  if("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
      # On FreeBSD (possibly other BSDs as well), we want to use
      # setusercontext() to set up the login configuration from login.conf
-@@ -60,8 +53,24 @@ else()
+@@ -60,8 +53,29 @@ else()
      target_link_libraries(sddm-helper crypt)
  endif()
  
++if (UTMPS_FOUND)
++    target_include_directories(sddm-helper SYSTEM PRIVATE ${UTMPS_INCLUDE_DIR})
++    target_link_libraries(sddm-helper ${UTMPS_LIBRARIES})
++endif (UTMPS_FOUND)
++
 +install(TARGETS sddm-helper RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
 +
 +add_executable(sddm-helper-start-wayland HelperStartWayland.cpp waylandsocketwatcher.cpp waylandhelper.cpp ${CMAKE_SOURCE_DIR}/src/common/SignalHandler.cpp)
