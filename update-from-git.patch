@@ -1456,7 +1456,7 @@ index 0c2ab26..ccda38b 100644
  Theme-API=2.0
 +QtVersion=@QT_MAJOR_VERSION@
 diff --git a/data/translations/CMakeLists.txt b/data/translations/CMakeLists.txt
-index 9558a1f..83467fd 100644
+index 9558a1f..1571927 100644
 --- a/data/translations/CMakeLists.txt
 +++ b/data/translations/CMakeLists.txt
 @@ -1,5 +1,6 @@
@@ -1466,15 +1466,18 @@ index 9558a1f..83467fd 100644
      bn.ts
      ca.ts
      cs.ts
-@@ -10,6 +11,7 @@ set(TRANSLATION_FILES
+@@ -8,8 +9,10 @@ set(TRANSLATION_FILES
+     es.ts
+     et.ts
      eu.ts
++    fa.ts
      fi.ts
      fr.ts
 +    gl.ts
      hi_IN.ts
      he.ts
      hu.ts
-@@ -17,6 +19,7 @@ set(TRANSLATION_FILES
+@@ -17,6 +20,7 @@ set(TRANSLATION_FILES
      is.ts
      it.ts
      ja.ts
@@ -1482,7 +1485,7 @@ index 9558a1f..83467fd 100644
      kk.ts
      ko.ts
      lt.ts
-@@ -42,7 +45,7 @@ set(TRANSLATION_FILES
+@@ -42,7 +46,7 @@ set(TRANSLATION_FILES
      zh_TW.ts
  )
  
@@ -1654,9 +1657,26 @@ index 916bf35..27cb437 100644
      </message>
      <message>
 diff --git a/data/translations/cs.ts b/data/translations/cs.ts
-index 8d47f3f..1b8abff 100644
+index 8d47f3f..9cb66e5 100644
 --- a/data/translations/cs.ts
 +++ b/data/translations/cs.ts
+@@ -5,14 +5,14 @@
+     <name>PictureBox</name>
+     <message>
+         <source>Press to login</source>
+-        <translation type="unfinished"></translation>
++        <translation>Klikněte pro přihlášení</translation>
+     </message>
+ </context>
+ <context>
+     <name>QObject</name>
+     <message>
+         <source>%1 (Wayland)</source>
+-        <translation type="unfinished"></translation>
++        <translation>%1 (Wayland)</translation>
+     </message>
+ </context>
+ <context>
 @@ -62,7 +62,7 @@
          <translation>Vypnout</translation>
      </message>
@@ -1718,6 +1738,85 @@ index a6b3fde..2b286bd 100644
          <translation>Erabiltzaile izena</translation>
      </message>
      <message>
+diff --git a/data/translations/fa.ts b/data/translations/fa.ts
+new file mode 100644
+index 0000000..ec1eddc
+--- /dev/null
++++ b/data/translations/fa.ts
+@@ -0,0 +1,73 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!DOCTYPE TS>
++<TS version="2.1" language="fa">
++<context>
++    <name>PictureBox</name>
++    <message>
++        <source>Press to login</source>
++        <translation>برای ورود کلیک کنید</translation>
++    </message>
++</context>
++<context>
++    <name>QObject</name>
++    <message>
++        <source>%1 (Wayland)</source>
++        <translation type="unfinished"></translation>
++    </message>
++</context>
++<context>
++    <name>TextConstants</name>
++    <message>
++        <source>Welcome to %1</source>
++        <translation>به %1 خوش آمدید.</translation>
++    </message>
++    <message>
++        <source>Warning, Caps Lock is ON!</source>
++        <translation>کلید Caps Lock روشن است!</translation>
++    </message>
++    <message>
++        <source>Layout</source>
++        <translation>طرح‌بندی</translation>
++    </message>
++    <message>
++        <source>Login</source>
++        <translation>ورود</translation>
++    </message>
++    <message>
++        <source>Login failed</source>
++        <translation>ورود ناموفق ماند</translation>
++    </message>
++    <message>
++        <source>Login succeeded</source>
++        <translation>ورود موفقیت‌آمیز بود</translation>
++    </message>
++    <message>
++        <source>Password</source>
++        <translation>گذرواژه</translation>
++    </message>
++    <message>
++        <source>Enter your username and password</source>
++        <translation>نام‌کاربری و رمزعبور خود را وارد کنید</translation>
++    </message>
++    <message>
++        <source>Reboot</source>
++        <translation>راه‌اندازی مجدد</translation>
++    </message>
++    <message>
++        <source>Session</source>
++        <translation>نشست</translation>
++    </message>
++    <message>
++        <source>Shutdown</source>
++        <translation>خاموش کردن</translation>
++    </message>
++    <message>
++        <source>Username</source>
++        <translation>نام‌کاربری</translation>
++    </message>
++    <message>
++        <source>Select your user and enter password</source>
++        <translation>کاربر خود را انتخاب و گذرواژه مربوطه را وارد کنید</translation>
++    </message>
++</context>
++</TS>
 diff --git a/data/translations/fi.ts b/data/translations/fi.ts
 index a4c3c01..07d3592 100644
 --- a/data/translations/fi.ts
