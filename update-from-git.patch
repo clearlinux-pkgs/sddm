@@ -8023,7 +8023,7 @@ index b63cf9a..96710f7 100644
  
          int rowCount(const QModelIndex &parent = QModelIndex()) const override;
 diff --git a/src/greeter/XcbKeyboardBackend.cpp b/src/greeter/XcbKeyboardBackend.cpp
-index 446059d..cf3dff5 100644
+index 446059d..4279bf1 100644
 --- a/src/greeter/XcbKeyboardBackend.cpp
 +++ b/src/greeter/XcbKeyboardBackend.cpp
 @@ -19,6 +19,7 @@
@@ -8034,6 +8034,15 @@ index 446059d..cf3dff5 100644
  
  #include "KeyboardModel.h"
  #include "KeyboardModel_p.h"
+@@ -79,7 +80,7 @@ namespace SDDM {
+         xcb_generic_error_t *error = nullptr;
+ 
+         m_conn = xcb_connect(nullptr, nullptr);
+-        if (m_conn == nullptr) {
++        if (xcb_connection_has_error(m_conn)) {
+             qCritical() << "xcb_connect failed, keyboard extension disabled";
+             d->enabled = false;
+             return;
 @@ -267,8 +268,7 @@ namespace SDDM {
      }
  
