@@ -7,7 +7,7 @@
 #
 Name     : sddm
 Version  : 0.21.0
-Release  : 39
+Release  : 40
 URL      : https://github.com/sddm/sddm/archive/v0.21.0/sddm-0.21.0.tar.gz
 Source0  : https://github.com/sddm/sddm/archive/v0.21.0/sddm-0.21.0.tar.gz
 Source1  : sddm.tmpfiles
@@ -138,7 +138,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1737745639
+export SOURCE_DATE_EPOCH=1738340423
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
@@ -203,7 +203,7 @@ FFLAGS="$CLEAR_INTERMEDIATE_FFLAGS"
 FCFLAGS="$CLEAR_INTERMEDIATE_FCFLAGS"
 ASFLAGS="$CLEAR_INTERMEDIATE_ASFLAGS"
 LDFLAGS="$CLEAR_INTERMEDIATE_LDFLAGS"
-export SOURCE_DATE_EPOCH=1737745639
+export SOURCE_DATE_EPOCH=1738340423
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp %{_builddir}/sddm-%{version}/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa || :

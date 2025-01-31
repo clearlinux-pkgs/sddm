@@ -2366,10 +2366,36 @@ index 3d4c077..a5e1b25 100644
      </message>
      <message>
 diff --git a/data/translations/ja.ts b/data/translations/ja.ts
-index 4c90a65..2bd0bc0 100644
+index 4c90a65..c113b8a 100644
 --- a/data/translations/ja.ts
 +++ b/data/translations/ja.ts
-@@ -62,7 +62,7 @@
+@@ -5,14 +5,14 @@
+     <name>PictureBox</name>
+     <message>
+         <source>Press to login</source>
+-        <translation type="unfinished"></translation>
++        <translation>ここを押してログイン</translation>
+     </message>
+ </context>
+ <context>
+     <name>QObject</name>
+     <message>
+         <source>%1 (Wayland)</source>
+-        <translation type="unfinished"></translation>
++        <translation>%1 (Wayland)</translation>
+     </message>
+ </context>
+ <context>
+@@ -23,7 +23,7 @@
+     </message>
+     <message>
+         <source>Warning, Caps Lock is ON!</source>
+-        <translation>注意: Caps ロックがオンになっています!</translation>
++        <translation>注意: Caps Lock がオンになっています</translation>
+     </message>
+     <message>
+         <source>Layout</source>
+@@ -62,12 +62,48 @@
          <translation>シャットダウン</translation>
      </message>
      <message>
@@ -2378,6 +2404,47 @@ index 4c90a65..2bd0bc0 100644
          <translation>ユーザ名</translation>
      </message>
      <message>
+         <source>Select your user and enter password</source>
+         <translation>ユーザ名を選び、パスワードを入力してください</translation>
+     </message>
++    <message>
++        <source>Please enter a password!</source>
++        <translation>パスワードを入力してください</translation>
++    </message>
++    <message>
++        <source>Change password</source>
++        <translation>パスワードを変更</translation>
++    </message>
++    <message>
++        <source>Enter your username</source>
++        <translation>ユーザー名を入力</translation>
++    </message>
++    <message>
++        <source>Enter your password</source>
++        <translation>パスワードを入力</translation>
++    </message>
++    <message>
++        <source>Password:</source>
++        <translation>パスワード:</translation>
++    </message>
++    <message>
++        <source>Show password</source>
++        <translation>パスワードを表示</translation>
++    </message>
++    <message>
++        <source>Hide password</source>
++        <translation>パスワードを非表示</translation>
++    </message>
++    <message>
++        <source>Suspend</source>
++        <translation>サスペンド</translation>
++    </message>
++    <message>
++        <source>Hibernate</source>
++        <translation>ハイバネート</translation>
++    </message>
+ </context>
+ </TS>
 diff --git a/data/translations/ka.ts b/data/translations/ka.ts
 new file mode 100644
 index 0000000..eb5c521
