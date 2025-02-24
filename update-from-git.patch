@@ -231,6 +231,11 @@ index e52e0e9..690ee70 100644
  
 -# Qt 5
 -find_package(Qt5 5.8.0 CONFIG REQUIRED Core DBus Gui Qml Quick LinguistTools Test)
+-
+-# find qt5 imports dir
+-get_target_property(QMAKE_EXECUTABLE Qt5::qmake LOCATION)
+-if(NOT QT_IMPORTS_DIR)
+-    exec_program(${QMAKE_EXECUTABLE} ARGS "-query QT_INSTALL_QML" RETURN_VALUE return_code OUTPUT_VARIABLE QT_IMPORTS_DIR)
 +# Qt
 +if(BUILD_WITH_QT6)
 +    set(QT_MAJOR_VERSION 6)
@@ -238,23 +243,19 @@ index e52e0e9..690ee70 100644
 +else()
 +    set(QT_MAJOR_VERSION 5)
 +    message(STATUS "Building Qt 5 version")
-+endif()
-+
-+find_package(Qt${QT_MAJOR_VERSION} 5.15.0 CONFIG REQUIRED Core DBus Gui Qml Quick LinguistTools Test QuickTest)
+ endif()
  
- # find qt5 imports dir
--get_target_property(QMAKE_EXECUTABLE Qt5::qmake LOCATION)
-+get_target_property(QMAKE_EXECUTABLE Qt${QT_MAJOR_VERSION}::qmake LOCATION)
- if(NOT QT_IMPORTS_DIR)
--    exec_program(${QMAKE_EXECUTABLE} ARGS "-query QT_INSTALL_QML" RETURN_VALUE return_code OUTPUT_VARIABLE QT_IMPORTS_DIR)
--endif()
--
 -# Uninstall target
 -if ("${ECM_VERSION}" VERSION_LESS "1.7.0")
 -    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
 -                   "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
 -                   IMMEDIATE @ONLY)
 -    add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
++find_package(Qt${QT_MAJOR_VERSION} 5.15.0 CONFIG REQUIRED Core DBus Gui Qml Quick LinguistTools Test QuickTest)
++
++# find qt5 imports dir
++get_target_property(QMAKE_EXECUTABLE Qt${QT_MAJOR_VERSION}::qmake LOCATION)
++if(NOT QT_IMPORTS_DIR)
 +    execute_process(COMMAND ${QMAKE_EXECUTABLE} -query QT_INSTALL_QML OUTPUT_VARIABLE QT_IMPORTS_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
  endif()
  
@@ -3363,25 +3364,25 @@ index fbf7608..f542c55 100644
 -    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/sddm.service.in" "${CMAKE_CURRENT_BINARY_DIR}/sddm.service")
 +    configure_file(sddm.service.in sddm.service)
      install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm.service" DESTINATION "${SYSTEMD_SYSTEM_UNIT_DIR}")
--endif()
++
++    configure_file(sddm-sysuser.conf.in sddm-sysuser.conf)
++    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-sysuser.conf" DESTINATION "${SYSTEMD_SYSUSERS_DIR}" RENAME sddm.conf)
+ endif()
  
 -if(USE_ELOGIND)
 -    set(LOGIND_PAM_MODULE "pam_elogind.so")
 -else()
 -    set(LOGIND_PAM_MODULE "pam_systemd.so")
-+    configure_file(sddm-sysuser.conf.in sddm-sysuser.conf)
-+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-sysuser.conf" DESTINATION "${SYSTEMD_SYSUSERS_DIR}" RENAME sddm.conf)
- endif()
--configure_file("${CMAKE_CURRENT_SOURCE_DIR}/sddm-greeter.pam.in" "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam")
- 
--install(FILES sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
--install(FILES sddm-autologin.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
--install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-greeter)
 +# systemd-tmpfiles can be used standalone without other systemd parts
 +if(DEFINED SYSTEMD_TMPFILES_DIR)
 +    configure_file(sddm-tmpfiles.conf.in sddm-tmpfiles.conf)
 +    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-tmpfiles.conf" DESTINATION "${SYSTEMD_TMPFILES_DIR}" RENAME sddm.conf)
-+endif()
+ endif()
+-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/sddm-greeter.pam.in" "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam")
+-
+-install(FILES sddm.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm)
+-install(FILES sddm-autologin.pam DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-autologin)
+-install(FILES "${CMAKE_CURRENT_BINARY_DIR}/sddm-greeter.pam" DESTINATION ${CMAKE_INSTALL_FULL_SYSCONFDIR}/pam.d RENAME sddm-greeter)
 diff --git a/services/sddm-autologin.pam b/services/sddm-autologin.pam
 deleted file mode 100755
 index 99729bc..0000000
@@ -3599,23 +3600,23 @@ index caca314..6c9b5c6 100644
 +                    bool status;
 +                    str >> status;
 +                    Q_EMIT auth->sessionStarted(status);
-+                    str.reset();
-+                    str << SESSION_STATUS;
-+                    str.send();
-+                    break;
-+                }
-+                case DISPLAY_SERVER_STARTED: {
-+                    QString displayName;
-+                    str >> displayName;
-+                    Q_EMIT auth->displayServerReady(displayName);
                      str.reset();
 -                    str << AUTHENTICATED << environment << cookie;
-+                    str << DISPLAY_SERVER_STARTED;
++                    str << SESSION_STATUS;
                      str.send();
 +                    break;
                  }
 -                else {
 -                    Q_EMIT auth->authentication(user, false);
++                case DISPLAY_SERVER_STARTED: {
++                    QString displayName;
++                    str >> displayName;
++                    Q_EMIT auth->displayServerReady(displayName);
++                    str.reset();
++                    str << DISPLAY_SERVER_STARTED;
++                    str.send();
++                    break;
++                }
 +                default: {
 +                    Q_EMIT auth->error(QStringLiteral("Auth: Unexpected value received: %1").arg(m), ERROR_INTERNAL);
                  }
@@ -4087,13 +4088,11 @@ index ba45d82..8526a02 100644
 +#include <QDir>
  
  #include <stdio.h>
--
--#ifdef HAVE_JOURNALD
--#include <systemd/sd-journal.h>
- #include <unistd.h>
-+
-+#ifdef HAVE_JOURNALD
-+#include <systemd/sd-journal.h>
++#include <unistd.h>
+ 
+ #ifdef HAVE_JOURNALD
+ #include <systemd/sd-journal.h>
+-#include <unistd.h>
  #endif
  
  namespace SDDM {
@@ -4180,15 +4179,17 @@ index ba45d82..8526a02 100644
 +            return;
          }
 -#else
-+#endif
-         // prepend program name
+-        // prepend program name
 -        logMessage = prefix + msg;
-+        QString logMessage = prefix + msg;
- 
+-
 -        // log to file or stdout
+-        standardLogger(type, logMessage);
+ #endif
++        // prepend program name
++        QString logMessage = prefix + msg;
++
 +        // log to file or stderr
-         standardLogger(type, logMessage);
--#endif
++        standardLogger(type, logMessage);
      }
  
      void DaemonMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
@@ -4618,22 +4619,29 @@ index 810105e..b829899 100644
              qCritical() << "Failed to set up SIGTERM handler.";
              return;
          }
--    }
--
++
++        if (::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sigcustomFd))
++            qCritical() << "Failed to create socket pair for custom signals handling.";
+     }
+ 
 -    void SignalHandler::initializeSigusr1() {
 -        struct sigaction sigusr1 = { };
 -        sigusr1.sa_handler = SignalHandler::usr1SignalHandler;
 -        sigemptyset(&sigusr1.sa_mask);
 -        sigusr1.sa_flags = SA_RESTART;
++    void SignalHandler::addCustomSignal(int signal)
++    {
++        struct sigaction sigcustom = { };
++        sigcustom.sa_handler = SignalHandler::customSignalHandler;
++        sigemptyset(&sigcustom.sa_mask);
++        sigcustom.sa_flags = SA_RESTART;
  
 -        if (sigaction(SIGUSR1, &sigusr1, 0) > 0) {
 -            qCritical() << "Failed to set up SIGUSR1 handler.";
 -            return;
 -        }
-+        if (::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0, sigcustomFd))
-+            qCritical() << "Failed to create socket pair for custom signals handling.";
-     }
- 
+-    }
+-
 -    void SignalHandler::ignoreSigusr1() {
 -        struct sigaction sigusr1 = { };
 -        sigusr1.sa_handler = SIG_IGN;
@@ -4645,13 +4653,7 @@ index 810105e..b829899 100644
 -            return;
 -        }
 -    }
-+    void SignalHandler::addCustomSignal(int signal)
-+    {
-+        struct sigaction sigcustom = { };
-+        sigcustom.sa_handler = SignalHandler::customSignalHandler;
-+        sigemptyset(&sigcustom.sa_mask);
-+        sigcustom.sa_flags = SA_RESTART;
- 
+-
 -    void SignalHandler::hupSignalHandler(int) {
 -        char a = 1;
 -        if (::write(sighupFd[0], &a, sizeof(a)) == -1) {
@@ -5033,24 +5035,11 @@ index 3ce6aff..9c0261e 100644
                  qDebug() << "VT mode didn't need to be fixed";
          }
  
+-        int setUpNewVt() {
+-            // open VT master
+-            int fd = open("/dev/tty0", O_RDWR | O_NOCTTY);
 +        int currentVt()
 +        {
-+            int fd = open(defaultVtPath, O_RDWR | O_NOCTTY);
-+            if (fd < 0) {
-+                qCritical() << "Failed to open VT master:" << strerror(errno);
-+                return -1;
-+            }
-+            auto closeFd = qScopeGuard([fd] {
-+                close(fd);
-+            });
-+
-+            return getVtActive(fd);
-+        }
-+
-+
-         int setUpNewVt() {
-             // open VT master
--            int fd = open("/dev/tty0", O_RDWR | O_NOCTTY);
 +            int fd = open(defaultVtPath, O_RDWR | O_NOCTTY);
              if (fd < 0) {
                  qCritical() << "Failed to open VT master:" << strerror(errno);
@@ -5062,8 +5051,21 @@ index 3ce6aff..9c0261e 100644
 -                qCritical() << "Failed to get current VT:" << strerror(errno);
 +            auto closeFd = qScopeGuard([fd] {
                  close(fd);
--                return -1;
--            }
++            });
++
++            return getVtActive(fd);
++        }
++
++
++        int setUpNewVt() {
++            // open VT master
++            int fd = open(defaultVtPath, O_RDWR | O_NOCTTY);
++            if (fd < 0) {
++                qCritical() << "Failed to open VT master:" << strerror(errno);
+                 return -1;
+             }
++            auto closeFd = qScopeGuard([fd] {
++                close(fd);
 +            });
  
              int vt = 0;
@@ -5953,26 +5955,28 @@ index b95f6e5..e10977e 100644
          // last session later, in slotAuthenticationFinished()
          m_sessionName = session.fileName();
  
+-        // some information
+-        qDebug() << "Session" << m_sessionName << "selected, command:" << session.exec();
+-
+-        QProcessEnvironment env;
+-
+-        if (seat()->name() == QLatin1String("seat0")) {
+-            // Use the greeter VT, for wayland sessions the helper overwrites this
+-            env.insert(QStringLiteral("XDG_VTNR"), QString::number(terminalId()));
 +        m_sessionTerminalId = m_terminalId;
 +        if ((session.type() == Session::WaylandSession && m_displayServerType == X11DisplayServerType) || (m_greeter->isRunning() && m_displayServerType != X11DisplayServerType)) {
 +            // Create a new VT when we need to have another compositor running
 +            if (seat()->canTTY()) {
 +                m_sessionTerminalId = VirtualTerminal::setUpNewVt();
 +            }
-+        }
-+
-         // some information
--        qDebug() << "Session" << m_sessionName << "selected, command:" << session.exec();
+         }
+ 
++        // some information
 +        qDebug() << "Session" << m_sessionName << "selected, command:" << session.exec() << "for VT" << m_sessionTerminalId;
- 
-         QProcessEnvironment env;
--
--        if (seat()->name() == QLatin1String("seat0")) {
--            // Use the greeter VT, for wayland sessions the helper overwrites this
--            env.insert(QStringLiteral("XDG_VTNR"), QString::number(terminalId()));
--        }
++
++        QProcessEnvironment env;
 +        env.insert(session.additionalEnv());
- 
++
          env.insert(QStringLiteral("PATH"), mainConfig.Users.DefaultPath.get());
 -        if (session.xdgSessionType() == QLatin1String("x11"))
 -            env.insert(QStringLiteral("DISPLAY"), name());
@@ -6047,22 +6051,25 @@ index b95f6e5..e10977e 100644
 -        // TODO: presentable to the user, eventually
 -        Q_UNUSED(info);
 -        qWarning() << "Authentication information:" << message;
-+        qWarning() << "Authentication information:" << info << message;
-+
-+        if (!m_socket)
-+            return;
-+
-+        m_socketServer->informationMessage(m_socket, message);
-     }
- 
-     void Display::slotAuthError(const QString &message, Auth::Error error) {
+-    }
+-
+-    void Display::slotAuthError(const QString &message, Auth::Error error) {
 -        // TODO: handle more errors
 -        qWarning() << "Authentication error:" << message;
-+        qWarning() << "Authentication error:" << error << message;
++        qWarning() << "Authentication information:" << info << message;
  
          if (!m_socket)
              return;
  
++        m_socketServer->informationMessage(m_socket, message);
++    }
++
++    void Display::slotAuthError(const QString &message, Auth::Error error) {
++        qWarning() << "Authentication error:" << error << message;
++
++        if (!m_socket)
++            return;
++
 +        m_socketServer->informationMessage(m_socket, message);
          if (error == Auth::ERROR_AUTHENTICATION)
              emit loginFailed(m_socket);
@@ -6677,12 +6684,12 @@ index eef26da..bead634 100644
              if (disp != -1)
 -                VirtualTerminal::jumpToVt(disp, true);
 +                nextVt = disp;
-         }
++        }
 +
 +        if (nextVt) {
 +            VirtualTerminal::jumpToVt(*nextVt, true);
-+        }
-+    }
+         }
+     }
 +
 +    bool Seat::canTTY() {
 +        OrgFreedesktopLogin1ManagerInterface manager(Logind::serviceName(), Logind::managerPath(), QDBusConnection::systemBus());
@@ -6694,7 +6701,7 @@ index eef26da..bead634 100644
 +        }
 +
 +        return m_name.compare(QStringLiteral("seat0"), Qt::CaseInsensitive) == 0 && access(VirtualTerminal::defaultVtPath, F_OK) == 0;
-     }
++    }
  }
 diff --git a/src/daemon/Seat.h b/src/daemon/Seat.h
 index bf22566..3cfdfdb 100644
@@ -7288,13 +7295,7 @@ index 5f93a1b..4a75662 100644
 +            env.insert(QStringLiteral("XCURSOR_SIZE"), xcursorSize);
 +        process->setProcessEnvironment(env);
  
-+        //create pipe for communicating with X server
-+        //0 == read from X, 1== write to from X
-+        int pipeFds[2];
-+        if (pipe(pipeFds) != 0) {
-+            qCritical("Could not create pipe to start X server");
-+        }
- 
+-
 -            // wait for display server to start
 -            if (!process->waitForStarted()) {
 -                // log message
@@ -7320,12 +7321,7 @@ index 5f93a1b..4a75662 100644
 -            // start display server
 -            QStringList args = mainConfig.X11.ServerArguments.get().split(QLatin1Char(' '), QString::SkipEmptyParts);
 -            args << QStringLiteral("-auth") << m_authPath
-+        // start display server
-+        QStringList args;
-+        if (!daemonApp->testing()) {
-+            process->setProgram(mainConfig.X11.ServerPath.get());
-+            args << mainConfig.X11.ServerArguments.get().split(QLatin1Char(' '), Qt::SkipEmptyParts)
-                  << QStringLiteral("-background") << QStringLiteral("none")
+-                 << QStringLiteral("-background") << QStringLiteral("none")
 -                 << QStringLiteral("-noreset")
 -                 << QStringLiteral("-displayfd") << QString::number(pipeFds[1])
 -                 << QStringLiteral("-seat") << displayPtr()->seat()->name();
@@ -7373,6 +7369,22 @@ index 5f93a1b..4a75662 100644
 -            m_display = QString::fromLocal8Bit(displayNumber);
 -
 -            // close our pipe
+-            close(pipeFds[0]);
+-
+-            emit started();
++        //create pipe for communicating with X server
++        //0 == read from X, 1== write to from X
++        int pipeFds[2];
++        if (pipe(pipeFds) != 0) {
++            qCritical("Could not create pipe to start X server");
+         }
+ 
++        // start display server
++        QStringList args;
++        if (!daemonApp->testing()) {
++            process->setProgram(mainConfig.X11.ServerPath.get());
++            args << mainConfig.X11.ServerArguments.get().split(QLatin1Char(' '), Qt::SkipEmptyParts)
++                 << QStringLiteral("-background") << QStringLiteral("none")
 +                 << QStringLiteral("-seat") << displayPtr()->seat()->name()
 +                 << QStringLiteral("vt%1").arg(displayPtr()->terminalId());
 +        } else {
@@ -7410,7 +7422,7 @@ index 5f93a1b..4a75662 100644
 +        if (!readPipe.open(pipeFds[0], QIODevice::ReadOnly)) {
 +            qCritical("Failed to open pipe to start X Server");
 +
-             close(pipeFds[0]);
++            close(pipeFds[0]);
 +            stop();
 +            return false;
 +        }
@@ -7418,19 +7430,18 @@ index 5f93a1b..4a75662 100644
 +        if (displayNumber.size() < 2) {
 +            // X server gave nothing (or a whitespace).
 +            qCritical("Failed to read display number from pipe");
- 
--            emit started();
++
 +            close(pipeFds[0]);
 +            stop();
 +            return false;
-         }
++        }
 +        displayNumber.prepend(QByteArray(":"));
 +        displayNumber.remove(displayNumber.size() -1, 1); // trim trailing whitespace
 +        m_display = QString::fromLocal8Bit(displayNumber);
 +
 +        // close our pipe
 +        close(pipeFds[0]);
- 
++
          // The file is also used by the greeter, which does care about the
          // display number. Write the proper entry, if it's different.
          if(m_display != QStringLiteral(":0")) {
@@ -8920,12 +8931,15 @@ index 8914ea7..f235a2c 100644
      target_link_libraries(sddm-helper crypt)
  endif()
  
+-if(JOURNALD_FOUND)
+-    target_link_libraries(sddm-helper ${JOURNALD_LIBRARIES})
+-endif()
 +if (UTMPS_FOUND)
 +    target_include_directories(sddm-helper SYSTEM PRIVATE ${UTMPS_INCLUDE_DIR})
 +    target_link_libraries(sddm-helper ${UTMPS_LIBRARIES})
 +endif (UTMPS_FOUND)
-+
-+install(TARGETS sddm-helper RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
+ 
+ install(TARGETS sddm-helper RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
 +
 +add_executable(sddm-helper-start-wayland HelperStartWayland.cpp waylandsocketwatcher.cpp waylandhelper.cpp ${CMAKE_SOURCE_DIR}/src/common/SignalHandler.cpp)
 +target_link_libraries(sddm-helper-start-wayland Qt${QT_MAJOR_VERSION}::Core)
@@ -8941,13 +8955,11 @@ index 8914ea7..f235a2c 100644
 +                                                ${LIBXAU_LINK_LIBRARIES})
 +install(TARGETS sddm-helper-start-x11user RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
 +
- if(JOURNALD_FOUND)
-     target_link_libraries(sddm-helper ${JOURNALD_LIBRARIES})
++if(JOURNALD_FOUND)
++    target_link_libraries(sddm-helper ${JOURNALD_LIBRARIES})
 +    target_link_libraries(sddm-helper-start-x11user ${JOURNALD_LIBRARIES})
 +    target_link_libraries(sddm-helper-start-wayland ${JOURNALD_LIBRARIES})
- endif()
--
--install(TARGETS sddm-helper RUNTIME DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}")
++endif()
 diff --git a/src/helper/HelperApp.cpp b/src/helper/HelperApp.cpp
 index 672359a..32da42d 100644
 --- a/src/helper/HelperApp.cpp
@@ -9426,13 +9438,6 @@ index c9a8a20..03fd396 100644
  
      bool UserSession::start() {
 -        QProcessEnvironment env = qobject_cast<HelperApp*>(parent())->session()->processEnvironment();
--
--        if (env.value(QStringLiteral("XDG_SESSION_CLASS")) == QLatin1String("greeter")) {
--            QProcess::start(m_path);
--        } else if (env.value(QStringLiteral("XDG_SESSION_TYPE")) == QLatin1String("x11")) {
--            const QString cmd = QStringLiteral("%1 \"%2\"").arg(mainConfig.X11.SessionCommand.get()).arg(m_path);
--            qInfo() << "Starting:" << cmd;
--            QProcess::start(cmd);
 +        auto helper = qobject_cast<HelperApp*>(parent());
 +        QProcessEnvironment env = processEnvironment();
 +
@@ -9490,7 +9495,13 @@ index c9a8a20..03fd396 100644
 +                setArguments({m_displayServerCmd, command});
 +            }
 +            QProcess::start();
-+
+ 
+-        if (env.value(QStringLiteral("XDG_SESSION_CLASS")) == QLatin1String("greeter")) {
+-            QProcess::start(m_path);
+-        } else if (env.value(QStringLiteral("XDG_SESSION_TYPE")) == QLatin1String("x11")) {
+-            const QString cmd = QStringLiteral("%1 \"%2\"").arg(mainConfig.X11.SessionCommand.get()).arg(m_path);
+-            qInfo() << "Starting:" << cmd;
+-            QProcess::start(cmd);
          } else if (env.value(QStringLiteral("XDG_SESSION_TYPE")) == QLatin1String("wayland")) {
 -            const QString cmd = QStringLiteral("%1 %2").arg(mainConfig.Wayland.SessionCommand.get()).arg(m_path);
 -            qInfo() << "Starting:" << cmd;
@@ -10909,9 +10920,13 @@ index aaf1b61..800f14f 100644
  
 -#include <QDebug>
 -#include <QString>
--
++#include <QQmlContext>
++#include <QQmlEngine>
++#include <QtQuickTest>
+ 
 -#include "VirtualTerminal.h"
--
++#include "ThemeConfig.h"
+ 
 -
 -namespace SDDM {
 -    namespace VirtualTerminal {
@@ -10923,12 +10938,6 @@ index aaf1b61..800f14f 100644
 -        void jumpToVt(int vt, bool vt_auto) {
 -            qDebug() << "Jumping to VT" << vt << "is unsupported on FreeBSD";
 -        }
-+#include <QQmlContext>
-+#include <QQmlEngine>
-+#include <QtQuickTest>
-+
-+#include "ThemeConfig.h"
-+
 +class Setup : public QObject
 +{
 +    Q_OBJECT
