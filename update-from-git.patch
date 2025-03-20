@@ -1,8 +1,8 @@
 diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
-index 4fa42f0..8c4e21b 100644
+index 4fa42f0..c8bcfc2 100644
 --- a/.github/workflows/build.yml
 +++ b/.github/workflows/build.yml
-@@ -17,38 +17,84 @@ jobs:
+@@ -17,38 +17,85 @@ jobs:
    build:
      if: "!contains(github.event.head_commit.message, 'ci skip')"
      strategy:
@@ -12,7 +12,7 @@ index 4fa42f0..8c4e21b 100644
 +          - "quay.io/fedora/fedora:rawhide"
 +          - "registry.opensuse.org/opensuse/tumbleweed-dnf"
 +          - "docker.io/library/ubuntu:22.04"
-+          - "docker.io/library/ubuntu:23.04"
++          - "docker.io/library/ubuntu:24.04"
          compiler:
            - gcc
            - clang
@@ -28,10 +28,10 @@ index 4fa42f0..8c4e21b 100644
 +          - container-image: "quay.io/centos/centos:stream9"
 +            compiler: gcc
 +            qt: "qt5"
-+          - container-image: "docker.io/library/ubuntu:23.04"
++          - container-image: "docker.io/library/ubuntu:24.04"
 +            compiler: clang
 +            qt: "qt6"
-+          - container-image: "docker.io/library/ubuntu:23.04"
++          - container-image: "docker.io/library/ubuntu:24.04"
 +            compiler: gcc
 +            qt: "qt6"
      runs-on: ubuntu-latest
@@ -59,6 +59,7 @@ index 4fa42f0..8c4e21b 100644
 +        run: |
 +          set -x
 +          sed -i '/^#\sdeb-src /s/^#//' "/etc/apt/sources.list"
++          ! [ -e /etc/apt/sources.list.d/ubuntu.sources ] || sed -i '/^Types: deb/s/$/ deb-src/' /etc/apt/sources.list.d/ubuntu.sources
 +          apt-get update -y
 +          DEBIAN_FRONTEND=noninteractive apt-get build-dep sddm -y
 +          if [ "${{ matrix.qt }}" = "qt6" ]; then
@@ -145,12 +146,12 @@ index 5d70019..043f389 100644
 +        env:
 +          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index e52e0e9..690ee70 100644
+index e52e0e9..1b5f54a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -1,4 +1,4 @@
 -cmake_minimum_required(VERSION 2.8.8)
-+cmake_minimum_required(VERSION 3.4)
++cmake_minimum_required(VERSION 3.5)
  
  project(SDDM)
  
@@ -925,68 +926,18 @@ index 6403368..5d2669f 100644
  =======
  
 diff --git a/data/scripts/Xsession b/data/scripts/Xsession
-index 5449810..a971d40 100755
+index 5449810..235a671 100755
 --- a/data/scripts/Xsession
 +++ b/data/scripts/Xsession
-@@ -8,26 +8,13 @@
- # Note that the respective logout scripts are not sourced.
- case $SHELL in
-   */bash)
--    [ -z "$BASH" ] && exec $SHELL $0 "$@"
-+    [ -z "$BASH" ] && exec $SHELL --login $0 "$@"
-+    shopt -q login_shell || exec $SHELL --login $0 "$@"
-     set +o posix
--    [ -f /etc/profile ] && . /etc/profile
--    if [ -f $HOME/.bash_profile ]; then
--      . $HOME/.bash_profile
--    elif [ -f $HOME/.bash_login ]; then
--      . $HOME/.bash_login
--    elif [ -f $HOME/.profile ]; then
--      . $HOME/.profile
--    fi
-     ;;
--*/zsh)
--    [ -z "$ZSH_NAME" ] && exec $SHELL $0 "$@"
--    [ -d /etc/zsh ] && zdir=/etc/zsh || zdir=/etc
--    zhome=${ZDOTDIR:-$HOME}
--    # zshenv is always sourced automatically.
--    [ -f $zdir/zprofile ] && . $zdir/zprofile
--    [ -f $zhome/.zprofile ] && . $zhome/.zprofile
--    [ -f $zdir/zlogin ] && . $zdir/zlogin
--    [ -f $zhome/.zlogin ] && . $zhome/.zlogin
-+  */zsh)
-+    [ -z "$ZSH_NAME" ] && exec $SHELL --login $0 "$@"
-+    [[ -o login ]] || exec $SHELL --login $0 "$@"
-     emulate -R sh
-     ;;
-   */csh|*/tcsh)
-@@ -39,6 +26,8 @@ case $SHELL in
-     rm -f $xsess_tmp
-     ;;
-   */fish)
-+    [ -f /etc/profile ] && . /etc/profile
-+    [ -f $HOME/.profile ] && . $HOME/.profile
-     xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
-     $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
-     . $xsess_tmp
-diff --git a/data/scripts/wayland-session b/data/scripts/wayland-session
-index de4f519..bbeb7ce 100755
---- a/data/scripts/wayland-session
-+++ b/data/scripts/wayland-session
-@@ -6,28 +6,19 @@
+@@ -5,50 +5,34 @@
+ # This file is extracted from kde-workspace (kdm/kfrontend/genkdmconf.c)
  # Copyright (C) 2001-2005 Oswald Buddenhagen <ossi@kde.org>
  
- # Note that the respective logout scripts are not sourced.
-+
-+# Backup the user shell setting into SDDM specific variable
-+SDDM_USER_SHELL=$SHELL
-+
- case $SHELL in
-   */bash)
+-# Note that the respective logout scripts are not sourced.
+-case $SHELL in
+-  */bash)
 -    [ -z "$BASH" ] && exec $SHELL $0 "$@"
-+    [ -z "$BASH" ] && exec $SHELL --login $0 "$@"
-+    shopt -q login_shell || exec $SHELL --login $0 "$@"
-     set +o posix
+-    set +o posix
 -    [ -f /etc/profile ] && . /etc/profile
 -    if [ -f $HOME/.bash_profile ]; then
 -      . $HOME/.bash_profile
@@ -995,7 +946,7 @@ index de4f519..bbeb7ce 100755
 -    elif [ -f $HOME/.profile ]; then
 -      . $HOME/.profile
 -    fi
-     ;;
+-    ;;
 -*/zsh)
 -    [ -z "$ZSH_NAME" ] && exec $SHELL $0 "$@"
 -    [ -d /etc/zsh ] && zdir=/etc/zsh || zdir=/etc
@@ -1005,29 +956,137 @@ index de4f519..bbeb7ce 100755
 -    [ -f $zhome/.zprofile ] && . $zhome/.zprofile
 -    [ -f $zdir/zlogin ] && . $zdir/zlogin
 -    [ -f $zhome/.zlogin ] && . $zhome/.zlogin
-+  */zsh)
-+    [ -z "$ZSH_NAME" ] && exec $SHELL --login $0 "$@"
-+    [[ -o login ]] || exec $SHELL --login $0 "$@"
-     emulate -R sh
+-    emulate -R sh
+-    ;;
+-  */csh|*/tcsh)
+-    # [t]cshrc is always sourced automatically.
+-    # Note that sourcing csh.login after .cshrc is non-standard.
+-    xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
+-    $SHELL -c "if (-f /etc/csh.login) source /etc/csh.login; if (-f ~/.login) source ~/.login; /bin/sh -c 'export -p' >! $xsess_tmp"
+-    . $xsess_tmp
+-    rm -f $xsess_tmp
+-    ;;
+-  */fish)
+-    xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
+-    $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
+-    . $xsess_tmp
+-    rm -f $xsess_tmp
+-    ;;
+-  *) # Plain sh, ksh, and anything we do not know.
+-    [ -f /etc/profile ] && . /etc/profile
+-    [ -f $HOME/.profile ] && . $HOME/.profile
+-    ;;
+-esac
++# Import the login environment for some shells by starting them as login shell
++# and executing this script. Inside, SDDM_XSESSION_PROFILE_READ will be set and
++# it continues below.
++if [ -z "$SDDM_XSESSION_PROFILE_READ" ]; then
++  export SDDM_XSESSION_PROFILE_READ=1
++
++  case $SHELL in
++    */bash|*/zsh)
++      exec $SHELL --login -c 'exec "$@"' - $0 "$@"
++      ;;
++    */csh|*/tcsh)
++      exec $SHELL -c 'if (-f /etc/csh.login) source /etc/csh.login; if (-f ~/.login) source ~/.login; exec $argv' $0 "$@"
++      ;;
++    */fish)
++      [ -f /etc/profile ] && . /etc/profile
++      [ -f $HOME/.profile ] && . $HOME/.profile
++      exec $SHELL --login -c 'exec $argv' $0 "$@"
++      ;;
++    *) # Plain sh, ksh, and anything we do not know.
++      [ -f /etc/profile ] && . /etc/profile
++      [ -f $HOME/.profile ] && . $HOME/.profile
++      exec $0 "$@"
++      ;;
++  esac
++
++  exit 1
++fi
++unset SDDM_XSESSION_PROFILE_READ
+ 
+ [ -f /etc/xprofile ] && . /etc/xprofile
+ [ -f /usr/local/etc/xprofile ] && . /usr/local/etc/xprofile
+@@ -100,6 +84,10 @@ fi
+ 
+ if [ -z "$*" ]; then
+     exec xmessage -center -buttons OK:0 -default OK "Sorry, $DESKTOP_SESSION is no valid session."
+-else
+-    exec $@
++    exit 1
+ fi
++
++# Note: This script is called with the whole session commandline as a single first argument.
++# To run it properly, word splitting has to be performed by the shell, i.e. $@ or $0 without quotes.
++exec $@
++exit 1
+diff --git a/data/scripts/wayland-session b/data/scripts/wayland-session
+index de4f519..3ed44b0 100755
+--- a/data/scripts/wayland-session
++++ b/data/scripts/wayland-session
+@@ -5,49 +5,28 @@
+ # This file is extracted from kde-workspace (kdm/kfrontend/genkdmconf.c)
+ # Copyright (C) 2001-2005 Oswald Buddenhagen <ossi@kde.org>
+ 
++# Note: This script is called with the whole session commandline as a single first argument.
++# To run it properly, word splitting has to be performed by the shell, i.e. $@ or $0 without quotes.
++
+ # Note that the respective logout scripts are not sourced.
++
+ case $SHELL in
+-  */bash)
+-    [ -z "$BASH" ] && exec $SHELL $0 "$@"
+-    set +o posix
+-    [ -f /etc/profile ] && . /etc/profile
+-    if [ -f $HOME/.bash_profile ]; then
+-      . $HOME/.bash_profile
+-    elif [ -f $HOME/.bash_login ]; then
+-      . $HOME/.bash_login
+-    elif [ -f $HOME/.profile ]; then
+-      . $HOME/.profile
+-    fi
+-    ;;
+-*/zsh)
+-    [ -z "$ZSH_NAME" ] && exec $SHELL $0 "$@"
+-    [ -d /etc/zsh ] && zdir=/etc/zsh || zdir=/etc
+-    zhome=${ZDOTDIR:-$HOME}
+-    # zshenv is always sourced automatically.
+-    [ -f $zdir/zprofile ] && . $zdir/zprofile
+-    [ -f $zhome/.zprofile ] && . $zhome/.zprofile
+-    [ -f $zdir/zlogin ] && . $zdir/zlogin
+-    [ -f $zhome/.zlogin ] && . $zhome/.zlogin
+-    emulate -R sh
++  */bash|*/zsh)
++    exec $SHELL --login -c 'exec "$@"' - $@
      ;;
    */csh|*/tcsh)
-@@ -39,6 +30,8 @@ case $SHELL in
-     rm -f $wlsess_tmp
+-    # [t]cshrc is always sourced automatically.
+-    # Note that sourcing csh.login after .cshrc is non-standard.
+-    wlsess_tmp=`mktemp /tmp/wlsess-env-XXXXXX`
+-    $SHELL -c "if (-f /etc/csh.login) source /etc/csh.login; if (-f ~/.login) source ~/.login; /bin/sh -c 'export -p' >! $wlsess_tmp"
+-    . $wlsess_tmp
+-    rm -f $wlsess_tmp
++    exec $SHELL -c 'if (-f /etc/csh.login) source /etc/csh.login; if (-f ~/.login) source ~/.login; exec $argv' $@
      ;;
    */fish)
+-    xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
+-    $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
+-    . $xsess_tmp
+-    rm -f $xsess_tmp
 +    [ -f /etc/profile ] && . /etc/profile
 +    [ -f $HOME/.profile ] && . $HOME/.profile
-     xsess_tmp=`mktemp /tmp/xsess-env-XXXXXX`
-     $SHELL --login -c "/bin/sh -c 'export -p' > $xsess_tmp"
-     . $xsess_tmp
-@@ -50,4 +43,7 @@ case $SHELL in
++    exec $SHELL --login -c 'exec $argv' $@
+     ;;
+   *) # Plain sh, ksh, and anything we do not know.
+     [ -f /etc/profile ] && . /etc/profile
+     [ -f $HOME/.profile ] && . $HOME/.profile
++    exec $@
      ;;
  esac
  
-+# Restore user shell setting that may have been clobbered by setting environment
-+export SHELL=$SDDM_USER_SHELL
-+
- exec $@
+-exec $@
++exit 1
 diff --git a/data/themes/CMakeLists.txt b/data/themes/CMakeLists.txt
 index 132fd55..a18fe89 100644
 --- a/data/themes/CMakeLists.txt
@@ -3336,6 +3395,42 @@ index bb14d69..23d8e39 100644
          <translation>Ім'я користувача</translation>
      </message>
      <message>
+diff --git a/data/translations/zh_TW.ts b/data/translations/zh_TW.ts
+index 16c5447..074696f 100644
+--- a/data/translations/zh_TW.ts
++++ b/data/translations/zh_TW.ts
+@@ -47,7 +47,7 @@
+     </message>
+     <message>
+         <source>Please enter a password!</source>
+-        <translation>請輸入密碼</translation>
++        <translation>請輸入密碼！</translation>
+     </message>
+     <message>
+         <source>Change password</source>
+@@ -95,7 +95,7 @@
+     </message>
+     <message>
+         <source>Suspend</source>
+-        <translation>掛起（到記憶體）</translation>
++        <translation>暫停</translation>
+     </message>
+     <message>
+         <source>Hibernate</source>
+@@ -111,11 +111,11 @@
+     </message>
+     <message>
+         <source>Password change aborted because maximum tries reached</source>
+-        <translation>達到最大嘗試次數，密碼更改已中止。</translation>
++        <translation>達到最大嘗試次數，密碼更改已中止</translation>
+     </message>
+     <message>
+         <source>New password change round! Please input current password again!</source>
+-        <translation>請再次輸入當前密碼！</translation>
++        <translation>請再次輸入目前的密碼！</translation>
+     </message>
+ </context>
+ </TS>
 diff --git a/docs/THEMING.md b/docs/THEMING.md
 index bc69be0..69997e8 100644
 --- a/docs/THEMING.md
@@ -4232,7 +4327,7 @@ index 8bbbe8e..721a042 100644
  namespace SDDM {
      class SafeDataStream : public QDataStream {
 diff --git a/src/common/Session.cpp b/src/common/Session.cpp
-index 2d7b04f..5eec648 100644
+index 2d7b04f..69779aa 100644
 --- a/src/common/Session.cpp
 +++ b/src/common/Session.cpp
 @@ -21,6 +21,12 @@
@@ -4248,7 +4343,7 @@ index 2d7b04f..5eec648 100644
  
  #include "Configuration.h"
  #include "Session.h"
-@@ -28,6 +34,56 @@
+@@ -28,6 +34,68 @@
  const QString s_entryExtention = QStringLiteral(".desktop");
  
  namespace SDDM {
@@ -4258,8 +4353,12 @@ index 2d7b04f..5eec648 100644
 +    class DesktopFileFormat {
 +        static bool readFunc(QIODevice &device, QSettings::SettingsMap &map)
 +        {
++            QString filename = QStringLiteral("(unknown)");
++            if(QFile *file = qobject_cast<QFile*>(&device); file)
++                filename = file->fileName();
++
 +            QString currentSectionName;
-+            while(!device.atEnd())
++            for(int lineNumber = 1; !device.atEnd(); lineNumber++)
 +            {
 +                // Iterate each line, remove line terminators
 +                const auto line = device.readLine().replace("\r", "").replace("\n", "");
@@ -4268,8 +4367,16 @@ index 2d7b04f..5eec648 100644
 +
 +                if(line.startsWith('[')) // Section header
 +                {
-+                    // Remove [ and ].
-+                    currentSectionName = QString::fromUtf8(line.mid(1, line.length() - 2));
++                    const int endOfHeader = line.lastIndexOf(']');
++                    if(endOfHeader < 0)
++                    {
++                        qWarning() << QStringLiteral("%1:%2: Invalid section header").arg(filename).arg(lineNumber);
++                        return false;
++                    }
++                    if(endOfHeader != line.length() - 1)
++                        qWarning() << QStringLiteral("%1:%2: Section header does not end line with ]").arg(filename).arg(lineNumber);
++
++                    currentSectionName = QString::fromUtf8(line.mid(1, endOfHeader - 1));
 +                }
 +                else if(int equalsPos = line.indexOf('='); equalsPos > 0) // Key=Value
 +                {
@@ -4305,7 +4412,7 @@ index 2d7b04f..5eec648 100644
      Session::Session()
          : m_valid(false)
          , m_type(UnknownSession)
-@@ -52,6 +108,16 @@ namespace SDDM {
+@@ -52,6 +120,16 @@ namespace SDDM {
          return m_type;
      }
  
@@ -4322,7 +4429,7 @@ index 2d7b04f..5eec648 100644
      QString Session::xdgSessionType() const
      {
          return m_xdgSessionType;
-@@ -89,7 +155,7 @@ namespace SDDM {
+@@ -89,7 +167,7 @@ namespace SDDM {
  
      QString Session::desktopSession() const
      {
@@ -4331,7 +4438,7 @@ index 2d7b04f..5eec648 100644
      }
  
      QString Session::desktopNames() const
-@@ -107,6 +173,10 @@ namespace SDDM {
+@@ -107,6 +185,10 @@ namespace SDDM {
          return m_isNoDisplay;
      }
  
@@ -4342,7 +4449,7 @@ index 2d7b04f..5eec648 100644
      void Session::setTo(Type type, const QString &_fileName)
      {
          QString fileName(_fileName);
-@@ -119,13 +189,15 @@ namespace SDDM {
+@@ -119,13 +201,15 @@ namespace SDDM {
          m_valid = false;
          m_desktopNames.clear();
  
@@ -4360,7 +4467,7 @@ index 2d7b04f..5eec648 100644
              m_xdgSessionType = QStringLiteral("x11");
              break;
          default:
-@@ -133,54 +205,56 @@ namespace SDDM {
+@@ -133,54 +217,56 @@ namespace SDDM {
              break;
          }
  
@@ -4459,7 +4566,7 @@ index 2d7b04f..5eec648 100644
  
          m_type = type;
          m_valid = true;
-@@ -191,4 +265,21 @@ namespace SDDM {
+@@ -191,4 +277,21 @@ namespace SDDM {
          setTo(other.type(), other.fileName());
          return *this;
      }
@@ -6528,17 +6635,16 @@ index 6eca29f..ab1d6ac 100644
  
          void suspend() const {
 diff --git a/src/daemon/Seat.cpp b/src/daemon/Seat.cpp
-index eef26da..bead634 100644
+index eef26da..f457119 100644
 --- a/src/daemon/Seat.cpp
 +++ b/src/daemon/Seat.cpp
-@@ -28,80 +28,80 @@
+@@ -28,80 +28,79 @@
  
  #include <QDebug>
  #include <QFile>
 +#include <QTimer>
  
  #include <functional>
-+#include <optional>
 +#include <unistd.h>
 +#include <Login1Manager.h>
 +#include <Login1Session.h>
@@ -6653,41 +6759,33 @@ index eef26da..bead634 100644
          // stop the display
          display->blockSignals(true);
          display->stop();
-@@ -113,22 +113,46 @@ namespace SDDM {
- 
-     void Seat::displayStopped() {
-         Display *display = qobject_cast<Display *>(sender());
-+        OrgFreedesktopLogin1ManagerInterface manager(Logind::serviceName(), Logind::managerPath(), QDBusConnection::systemBus());
-+        std::optional<int> nextVt;
-+        auto reusing = display->reuseSessionId();
-+        if (manager.isValid() && !reusing.isEmpty()) {
-+            auto sessionPath = manager.GetSession(reusing);
-+            OrgFreedesktopLogin1SessionInterface sessionIface(Logind::serviceName(), sessionPath.value().path(), QDBusConnection::systemBus());
-+            nextVt = QStringView(sessionIface.tTY()).mid(3).toInt(); // we need to convert ttyN to N
-+        }
- 
+@@ -117,18 +116,31 @@ namespace SDDM {
          // remove display
          removeDisplay(display);
  
-         // restart otherwise
-         if (m_displays.isEmpty()) {
+-        // restart otherwise
+-        if (m_displays.isEmpty()) {
 -            createDisplay();
-+            createDisplay(Display::defaultDisplayServerType());
-         }
+-        }
++        // If the display ended up reusing a session, it already jumped to it.
++        if (!display->reuseSessionId().isEmpty())
++            return;
++
          // If there is still a session running on some display,
          // switch to last display in display vector.
-         // Set vt_auto to true, so let the kernel handle the
-         // vt switch automatically (VT_AUTO).
+-        // Set vt_auto to true, so let the kernel handle the
+-        // vt switch automatically (VT_AUTO).
 -        else {
-+        else if (!nextVt) {
-             int disp = m_displays.last()->terminalId();
-             if (disp != -1)
+-            int disp = m_displays.last()->terminalId();
+-            if (disp != -1)
 -                VirtualTerminal::jumpToVt(disp, true);
-+                nextVt = disp;
-+        }
-+
-+        if (nextVt) {
-+            VirtualTerminal::jumpToVt(*nextVt, true);
++        if (!m_displays.isEmpty() && m_displays.constLast()->terminalId() > 0) {
++            // Set vt_auto to true, so let the kernel handle the
++            // vt switch automatically (VT_AUTO).
++            VirtualTerminal::jumpToVt(m_displays.constLast()->terminalId(), true);
++        } else {
++            // restart otherwise
++            createDisplay(Display::defaultDisplayServerType());
          }
      }
 +
@@ -11028,10 +11126,10 @@ index 0000000..a658fad
 +}
 diff --git a/test/SessionTest.cpp b/test/SessionTest.cpp
 new file mode 100644
-index 0000000..ef8df6f
+index 0000000..ebc5134
 --- /dev/null
 +++ b/test/SessionTest.cpp
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,82 @@
 +/***************************************************************************
 +* Copyright (c) 2023 Fabian Vogt <fvogt@suse.de>
 +*
@@ -11093,11 +11191,40 @@ index 0000000..ef8df6f
 +        QCOMPARE(session.isHidden(), false);
 +        QCOMPARE(session.isNoDisplay(), false);
 +    }
++    void testAlmostInvalid()
++    {
++        auto fileName = QFINDTESTDATA("almostinvalid.desktop");
++        SDDM::Session session(SDDM::Session::X11Session, fileName);
++        QVERIFY(session.isValid());
++        QCOMPARE(session.xdgSessionType(), QStringLiteral("x11"));
++        QCOMPARE(session.fileName(), fileName);
++        QCOMPARE(session.displayName(), QStringLiteral("Smart DE change "));
++        QCOMPARE(session.comment(), QStringLiteral("Plasma for huesped and LXQt for other"));
++        QCOMPARE(session.exec(), QStringLiteral("/usr/sbin/startDE.sh"));
++        QCOMPARE(session.tryExec(), QStringLiteral("/usr/sbin/startDE.sh"));
++        QCOMPARE(session.desktopSession(), QStringLiteral("almostinvalid"));
++        QCOMPARE(session.desktopNames(), QStringLiteral("SmartDeskSel"));
++        QCOMPARE(session.isHidden(), false);
++        QCOMPARE(session.isNoDisplay(), false);
++    }
 +};
 +
 +QTEST_MAIN(SessionTest);
 +
 +#include "SessionTest.moc"
+diff --git a/test/almostinvalid.desktop b/test/almostinvalid.desktop
+new file mode 100644
+index 0000000..8813819
+--- /dev/null
++++ b/test/almostinvalid.desktop
+@@ -0,0 +1,7 @@
++[Desktop Entry] 
++Type=Application 
++Exec=/usr/sbin/startDE.sh
++TryExec=/usr/sbin/startDE.sh
++DesktopNames=SmartDeskSel
++Name=Smart DE change 
++Comment=Plasma for huesped and LXQt for other
 diff --git a/test/plasmawayland-dev.desktop b/test/plasmawayland-dev.desktop
 new file mode 100644
 index 0000000..0fa1b87

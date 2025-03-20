@@ -7,7 +7,7 @@
 #
 Name     : sddm
 Version  : 0.21.0
-Release  : 41
+Release  : 42
 URL      : https://github.com/sddm/sddm/archive/v0.21.0/sddm-0.21.0.tar.gz
 Source0  : https://github.com/sddm/sddm/archive/v0.21.0/sddm-0.21.0.tar.gz
 Source1  : sddm.tmpfiles
@@ -45,8 +45,7 @@ Patch2: 0005-autologin.pam-Use-login-instead-of-system-login.patch
 Patch3: pam-path-fix.patch
 
 %description
-These are the default avatars.
-They are installed to `.face.icon` and `root.face.icon`. See ../CMakeLists.txt.
+This theme is part of the Simple Desktop Display Manager distribution. This theme is based QtQuick2.
 
 %package autostart
 Summary: autostart components for the sddm package.
@@ -138,7 +137,7 @@ export http_proxy=http://127.0.0.1:9/
 export https_proxy=http://127.0.0.1:9/
 export no_proxy=localhost,127.0.0.1,0.0.0.0
 export LANG=C.UTF-8
-export SOURCE_DATE_EPOCH=1740418192
+export SOURCE_DATE_EPOCH=1742485067
 mkdir -p clr-build
 pushd clr-build
 export GCC_IGNORE_WERROR=1
@@ -203,7 +202,7 @@ FFLAGS="$CLEAR_INTERMEDIATE_FFLAGS"
 FCFLAGS="$CLEAR_INTERMEDIATE_FCFLAGS"
 ASFLAGS="$CLEAR_INTERMEDIATE_ASFLAGS"
 LDFLAGS="$CLEAR_INTERMEDIATE_LDFLAGS"
-export SOURCE_DATE_EPOCH=1740418192
+export SOURCE_DATE_EPOCH=1742485067
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/usr/share/package-licenses/sddm
 cp %{_builddir}/sddm-%{version}/LICENSE %{buildroot}/usr/share/package-licenses/sddm/db95910cb27890d60e596e4c622fc3eeba6693fa || :
