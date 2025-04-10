@@ -3927,7 +3927,7 @@ index 87f5f44..c78da55 100644
          * Emitted when the helper quits, either after authentication or when the session ends.
          * Or, when something goes wrong.
 diff --git a/src/auth/AuthMessages.h b/src/auth/AuthMessages.h
-index 3bc97b6..6aea748 100644
+index 3bc97b6..d7348b7 100644
 --- a/src/auth/AuthMessages.h
 +++ b/src/auth/AuthMessages.h
 @@ -97,6 +97,7 @@ namespace SDDM {
@@ -3938,6 +3938,15 @@ index 3bc97b6..6aea748 100644
          MSG_LAST,
      };
  
+@@ -187,7 +188,7 @@ namespace SDDM {
+     inline QDataStream& operator<<(QDataStream &s, const Request &m) {
+         qint32 length = m.prompts.length();
+         s << length;
+-        for(const Prompt &p : qAsConst(m.prompts)) {
++        for(const Prompt &p : std::as_const(m.prompts)) {
+             s << p;
+         }
+         return s;
 diff --git a/src/auth/AuthPrompt.h b/src/auth/AuthPrompt.h
 index 8ed394d..dcaa539 100644
 --- a/src/auth/AuthPrompt.h
@@ -3966,9 +3975,27 @@ index 8ed394d..dcaa539 100644
 \ No newline at end of file
 +#endif //PROMPT_H
 diff --git a/src/auth/AuthRequest.cpp b/src/auth/AuthRequest.cpp
-index 9583b0a..9ccc2d2 100644
+index 9583b0a..3f68fd4 100644
 --- a/src/auth/AuthRequest.cpp
 +++ b/src/auth/AuthRequest.cpp
+@@ -38,7 +38,7 @@ namespace SDDM {
+             : QObject(parent) { }
+ 
+     void AuthRequest::Private::responseChanged() {
+-        for(const AuthPrompt *qap : qAsConst(prompts)) {
++        for(const AuthPrompt *qap : std::as_const(prompts)) {
+             if (qap->response().isEmpty())
+                 return;
+         }
+@@ -54,7 +54,7 @@ namespace SDDM {
+         QList<AuthPrompt*> promptsCopy(d->prompts);
+         d->prompts.clear();
+         if (request != nullptr) {
+-            for (const Prompt& p : qAsConst(request->prompts)) {
++            for (const Prompt& p : std::as_const(request->prompts)) {
+                 AuthPrompt *qap = new AuthPrompt(&p, this);
+                 d->prompts << qap;
+                 if (finishAutomatically())
 @@ -73,7 +73,7 @@ namespace SDDM {
      }
  
@@ -3978,8 +4005,17 @@ index 9583b0a..9ccc2d2 100644
      }
  
      void AuthRequest::done() {
+@@ -96,7 +96,7 @@ namespace SDDM {
+ 
+     Request AuthRequest::request() const {
+         Request r;
+-        for (const AuthPrompt* qap : qAsConst(d->prompts)) {
++        for (const AuthPrompt* qap : std::as_const(d->prompts)) {
+             Prompt p;
+             p.hidden = qap->hidden();
+             p.message = qap->message();
 diff --git a/src/common/ConfigReader.cpp b/src/common/ConfigReader.cpp
-index 041e5ed..da7d92a 100644
+index 041e5ed..0117a83 100644
 --- a/src/common/ConfigReader.cpp
 +++ b/src/common/ConfigReader.cpp
 @@ -27,19 +27,19 @@
@@ -4016,6 +4052,15 @@ index 041e5ed..da7d92a 100644
      return str;
  }
  
+@@ -182,7 +182,7 @@ namespace SDDM {
+         }
+         m_fileModificationTime = latestModificationTime;
+ 
+-        for (const QString &filepath : qAsConst(files)) {
++        for (const QString &filepath : std::as_const(files)) {
+             loadInternal(filepath);
+         }
+     }
 @@ -197,7 +197,7 @@ namespace SDDM {
              return;
          while (!in.atEnd()) {
@@ -4034,6 +4079,24 @@ index 041e5ed..da7d92a 100644
  
                  auto sectionIterator = m_sections.constFind(currentSection);
                  if (sectionIterator != m_sections.constEnd() && sectionIterator.value()->entry(name))
+@@ -245,14 +245,14 @@ namespace SDDM {
+             if (entry && !entry->matchesDefault())
+                 remainingEntries.insert(section, entry);
+             else {
+-                for (const ConfigEntryBase *b : qAsConst(section->entries()))
++                for (const ConfigEntryBase *b : std::as_const(section->entries()))
+                     if (!b->matchesDefault())
+                         remainingEntries.insert(section, b);
+             }
+         }
+         else {
+-            for (const ConfigSection *s : qAsConst(m_sections)) {
+-                for (const ConfigEntryBase *b : qAsConst(s->entries()))
++            for (const ConfigSection *s : std::as_const(m_sections)) {
++                for (const ConfigEntryBase *b : std::as_const(s->entries()))
+                     if (!b->matchesDefault())
+                         remainingEntries.insert(s, b);
+             }
 @@ -265,7 +265,7 @@ namespace SDDM {
          QByteArray junk;
          // stores the junk to the temporary storage
@@ -4327,7 +4390,7 @@ index 8bbbe8e..721a042 100644
  namespace SDDM {
      class SafeDataStream : public QDataStream {
 diff --git a/src/common/Session.cpp b/src/common/Session.cpp
-index 2d7b04f..69779aa 100644
+index 2d7b04f..b116f4c 100644
 --- a/src/common/Session.cpp
 +++ b/src/common/Session.cpp
 @@ -21,6 +21,12 @@
@@ -4473,7 +4536,7 @@ index 2d7b04f..69779aa 100644
  
 -        m_fileName = m_dir.absoluteFilePath(fileName);
 +        QFile file;
-+        for (const auto &path: qAsConst(sessionDirs)) {
++        for (const auto &path: std::as_const(sessionDirs)) {
 +            m_dir.setPath(path);
 +            m_fileName = m_dir.absoluteFilePath(fileName);
  
@@ -4542,7 +4605,7 @@ index 2d7b04f..69779aa 100644
 +        settings.beginGroup(QLatin1String("Desktop Entry"));
 +
 +        auto localizedValue = [&] (const QLatin1String &key) {
-+            for (QString locale : qAsConst(locales)) {
++            for (QString locale : std::as_const(locales)) {
 +                QString localizedValue = settings.value(key + QLatin1Char('[') + locale + QLatin1Char(']'), QString()).toString();
 +                if (!localizedValue.isEmpty()) {
 +                    return localizedValue;
@@ -7964,7 +8027,7 @@ index 2752964..b9159c5 100644
 -install(TARGETS sddm-greeter DESTINATION "${CMAKE_INSTALL_BINDIR}")
 +install(TARGETS ${GREETER_TARGET} DESTINATION "${CMAKE_INSTALL_BINDIR}")
 diff --git a/src/greeter/GreeterApp.cpp b/src/greeter/GreeterApp.cpp
-index bbce512..01613cc 100644
+index bbce512..be4f9f0 100644
 --- a/src/greeter/GreeterApp.cpp
 +++ b/src/greeter/GreeterApp.cpp
 @@ -24,6 +24,7 @@
@@ -8035,6 +8098,15 @@ index bbce512..01613cc 100644
          // Create views
          const QList<QScreen *> screens = qGuiApp->primaryScreen()->virtualSiblings();
          for (QScreen *screen : screens)
+@@ -280,7 +288,7 @@ namespace SDDM {
+ 
+     void GreeterApp::activatePrimary() {
+         // activate and give focus to the window assigned to the primary screen
+-        for (QQuickView *view : qAsConst(m_views)) {
++        for (QQuickView *view : std::as_const(m_views)) {
+             if (view->screen() == QGuiApplication::primaryScreen()) {
+                 view->requestActivate();
+                 break;
 @@ -296,9 +304,7 @@ namespace SDDM {
  
  int main(int argc, char **argv)
@@ -8282,7 +8354,7 @@ index 16284f2..1771e0b 100644
          ScreenModel(QScreen *screen, QObject *parent = 0);
          ~ScreenModel();
 diff --git a/src/greeter/SessionModel.cpp b/src/greeter/SessionModel.cpp
-index 1953c76..d8698b7 100644
+index 1953c76..61b115b 100644
 --- a/src/greeter/SessionModel.cpp
 +++ b/src/greeter/SessionModel.cpp
 @@ -22,6 +22,7 @@
@@ -8383,7 +8455,7 @@ index 1953c76..d8698b7 100644
 -                continue;
 -
 +        sessions.removeDuplicates();
-+        for (auto& session : qAsConst(sessions)) {
++        for (auto& session : std::as_const(sessions)) {
              Session *si = new Session(type, session);
              bool execAllowed = true;
              QFileInfo fi(si->tryExec());
@@ -8440,7 +8512,7 @@ index 2e2efa9..0f935c4 100644
  }
  
 diff --git a/src/greeter/UserModel.cpp b/src/greeter/UserModel.cpp
-index 7d7f9e2..c07bcba 100644
+index 7d7f9e2..7c67222 100644
 --- a/src/greeter/UserModel.cpp
 +++ b/src/greeter/UserModel.cpp
 @@ -136,14 +136,20 @@ namespace SDDM {
@@ -8479,7 +8551,7 @@ index 7d7f9e2..c07bcba 100644
          return d->lastIndex;
      }
  
-@@ -173,7 +179,7 @@ namespace SDDM {
+@@ -173,11 +179,11 @@ namespace SDDM {
      }
  
      int UserModel::rowCount(const QModelIndex &parent) const {
@@ -8488,6 +8560,11 @@ index 7d7f9e2..c07bcba 100644
      }
  
      QVariant UserModel::data(const QModelIndex &index, int role) const {
+-        if (index.row() < 0 || index.row() > d->users.count())
++        if (index.row() < 0 || index.row() >= d->users.count())
+             return QVariant();
+ 
+         // get user
 diff --git a/src/greeter/UserModel.h b/src/greeter/UserModel.h
 index b63cf9a..96710f7 100644
 --- a/src/greeter/UserModel.h
