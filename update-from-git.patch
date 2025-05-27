@@ -1557,18 +1557,128 @@ index 9558a1f..1571927 100644
  install(FILES ${QM_FILES} DESTINATION "${COMPONENTS_TRANSLATION_DIR}")
  
 diff --git a/data/translations/ar.ts b/data/translations/ar.ts
-index a8651d1..4bf1fd1 100644
+index a8651d1..e8053c5 100644
 --- a/data/translations/ar.ts
 +++ b/data/translations/ar.ts
-@@ -62,7 +62,7 @@
-         <translation>أطفئ</translation>
+@@ -5,14 +5,18 @@
+     <name>PictureBox</name>
+     <message>
+         <source>Press to login</source>
+-        <translation type="unfinished"></translation>
++        <translation>اضغط لستجيل الدخول</translation>
+     </message>
+ </context>
+ <context>
+     <name>QObject</name>
++    <message>
++        <source>%1</source>
++        <translation>%1</translation>
++    </message>
+     <message>
+         <source>%1 (Wayland)</source>
+-        <translation type="unfinished"></translation>
++        <translation>%1 (Wayland)</translation>
+     </message>
+ </context>
+ <context>
+@@ -27,31 +31,31 @@
+     </message>
+     <message>
+         <source>Layout</source>
+-        <translation>التّخطيط</translation>
++        <translation>المُخطط</translation>
+     </message>
+     <message>
+         <source>Login</source>
+-        <translation>لِج</translation>
++        <translation>تسجيل الدخول</translation>
+     </message>
+     <message>
+         <source>Login failed</source>
+-        <translation>فشل الولوج</translation>
++        <translation>فشل تسجيل الدخول</translation>
+     </message>
+     <message>
+         <source>Login succeeded</source>
+-        <translation>نجح الولوج</translation>
++        <translation>نجح تسجيل الدخول</translation>
+     </message>
+     <message>
+         <source>Password</source>
+-        <translation>كلمة المرور</translation>
++        <translation>كلمة السر</translation>
+     </message>
+     <message>
+         <source>Enter your username and password</source>
+-        <translation>أدخل اسم المستخدم وكلمة مروره</translation>
++        <translation>أدخل اسم المستخدم وكلمة السر</translation>
+     </message>
+     <message>
+         <source>Reboot</source>
+-        <translation>أعد الإقلاع</translation>
++        <translation>أعادة التشغيل</translation>
+     </message>
+     <message>
+         <source>Session</source>
+@@ -59,15 +63,55 @@
+     </message>
+     <message>
+         <source>Shutdown</source>
+-        <translation>أطفئ</translation>
++        <translation>أيقاف التشغيل</translation>
      </message>
      <message>
 -        <source>User name</source>
++    <source>Suspend</source>
++        <translation>ايقاف</translation>
++    </message>
++    <message>
++        <source>Hibernate</source>
++        <translation>وضع الثبات</translation>
++    </message>
++    <message>
 +        <source>Username</source>
          <translation>اسم المستخدم</translation>
      </message>
      <message>
+         <source>Select your user and enter password</source>
+-        <translation>اختر مستخدمًا وأدخل كلمة مروره</translation>
++        <translation>اختر مستخدمًا وأدخل كلمة السر</translation>
++    </message>
++    <message>
++        <source>Please enter a password!</source>
++        <translation>برجاء ادخال كلمة السر</translation>
++    </message>
++    <message>
++        <source>Change password</source>
++        <translation>تغيير كلمة السر</translation>
++    </message>
++    <message>
++        <source>Enter your username</source>
++        <translation>ادخل اسم المستخدم الخاص بك</translation>
++    </message>
++    <message>
++        <source>Enter your password</source>
++        <translation>ادخل كلمة السر الخاصة بك</translation>
++    </message>
++    <message>
++        <source>Password:</source>
++        <translation>كلمة السر:</translation>
++    </message>
++    <message>
++        <source>Show password</source>
++        <translation>اظهر كلمة السر</translation>
++    </message>
++    <message>
++        <source>Hide password</source>
++        <translation>اخفِ كلمة السر</translation>
++    </message>
++    <message>
++        <source>Password change aborted because maximum tries reached</source>
++        <translation>لا يمكن تغيير كلمة السر لتخطي اقصي عدد ممكن من المحاولات</translation>
+     </message>
+ </context>
+ </TS>
 diff --git a/data/translations/bg.ts b/data/translations/bg.ts
 new file mode 100644
 index 0000000..97f1907
@@ -7325,7 +7435,7 @@ index 0000000..a8d9826
 +
 +#endif // SDDM_WAYLANDDISPLAYSERVER_H
 diff --git a/src/daemon/XorgDisplayServer.cpp b/src/daemon/XorgDisplayServer.cpp
-index 5f93a1b..4a75662 100644
+index 5f93a1b..a241320 100644
 --- a/src/daemon/XorgDisplayServer.cpp
 +++ b/src/daemon/XorgDisplayServer.cpp
 @@ -23,7 +23,6 @@
@@ -7660,20 +7770,25 @@ index 5f93a1b..4a75662 100644
  
          // create display setup script process
          QProcess *displayStopScript = new QProcess();
-@@ -285,7 +240,8 @@ namespace SDDM {
+@@ -285,61 +240,79 @@ namespace SDDM {
  
          // start display stop script
          qDebug() << "Running display stop script " << displayStopCommand;
 -        displayStopScript->start(displayStopCommand);
 +        const auto program = displayStopCommand.takeFirst();
 +        displayStopScript->start(program, displayStopCommand);
++
++        // delete displayStopScript on finish
++        connect(displayStopScript, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), displayStopScript, &QProcess::deleteLater);
  
          // wait for finished
          if (!displayStopScript->waitForFinished(5000))
-@@ -295,38 +251,35 @@ namespace SDDM {
-         displayStopScript->deleteLater();
-         displayStopScript = nullptr;
+             displayStopScript->kill();
  
+-        // clean up the script process
+-        displayStopScript->deleteLater();
+-        displayStopScript = nullptr;
+-
 -        // clean up
 -        process->deleteLater();
 -        process = nullptr;
@@ -7718,7 +7833,11 @@ index 5f93a1b..4a75662 100644
  
          // delete setCursor on finish
          connect(setCursor, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), setCursor, &QProcess::deleteLater);
-@@ -337,9 +290,29 @@ namespace SDDM {
+ 
+         // wait for finished
+-        if (!setCursor->waitForFinished(1000)) {
++        if (!setCursor->waitForFinished(5000)) {
+             qWarning() << "Could not setup default cursor";
              setCursor->kill();
          }
  
@@ -7734,9 +7853,10 @@ index 5f93a1b..4a75662 100644
 +                xrdbProcess.write(QStringLiteral("Xcursor.size: %1\n").arg(xcursorSize).toUtf8());
 +
 +            xrdbProcess.closeWriteChannel();
-+            if (!xrdbProcess.waitForFinished(1000)) {
++            if (!xrdbProcess.waitForFinished(5000)) {
 +                qDebug() << "Could not set Xcursor resources" << xrdbProcess.error();
 +                xrdbProcess.kill();
++                xrdbProcess.waitForFinished(-1);
 +            }
 +        }
 +
@@ -7790,7 +7910,7 @@ index e97a0b5..de4d75a 100644
  
 diff --git a/src/daemon/XorgUserDisplayServer.cpp b/src/daemon/XorgUserDisplayServer.cpp
 new file mode 100644
-index 0000000..1e7c008
+index 0000000..96484b8
 --- /dev/null
 +++ b/src/daemon/XorgUserDisplayServer.cpp
 @@ -0,0 +1,102 @@
@@ -7851,13 +7971,13 @@ index 0000000..1e7c008
 +             << QStringLiteral("-screen") << QStringLiteral("800x600");
 +    } else {
 +        args << mainConfig.X11.ServerPath.get()
++             << QStringLiteral("-verbose") << QStringLiteral("3")
 +             << mainConfig.X11.ServerArguments.get().split(QLatin1Char(' '), Qt::SkipEmptyParts)
 +             << QStringLiteral("-background") << QStringLiteral("none")
 +             << QStringLiteral("-seat") << display->seat()->name()
 +             << QStringLiteral("-noreset")
 +             << QStringLiteral("-keeptty")
-+             << QStringLiteral("-novtswitch")
-+             << QStringLiteral("-verbose") << QStringLiteral("3");
++             << QStringLiteral("-novtswitch");
 +    }
 +
 +    return args.join(QLatin1Char(' '));
@@ -10716,10 +10836,10 @@ index 0000000..0032c18
 +#endif // WAYLANDSOCKETWATCHER_H
 diff --git a/src/helper/xorguserhelper.cpp b/src/helper/xorguserhelper.cpp
 new file mode 100644
-index 0000000..65dbe1e
+index 0000000..4db2bfb
 --- /dev/null
 +++ b/src/helper/xorguserhelper.cpp
-@@ -0,0 +1,266 @@
+@@ -0,0 +1,271 @@
 +/***************************************************************************
 +* Copyright (c) 2021 Pier Luigi Fiorini <pierluigi.fiorini@gmail.com>
 +*
@@ -10934,14 +11054,16 @@ index 0000000..65dbe1e
 +        env.insert(QStringLiteral("XCURSOR_SIZE"), xcursorSize);
 +
 +    // Set cursor
-+    qInfo("Setting default cursor...");
-+    QProcess *setCursor = nullptr;
-+    if (startProcess(QStringLiteral("xsetroot -cursor_name left_ptr"), env, &setCursor)) {
-+        if (!setCursor->waitForFinished(1000)) {
-+            qWarning() << "Could not setup default cursor";
-+            setCursor->kill();
++    {
++        qInfo("Setting default cursor...");
++        QProcess setCursor;
++        setCursor.setProcessEnvironment(env);
++        setCursor.start(QStringLiteral("xsetroot"), QStringList{QStringLiteral("-cursor_name"), QStringLiteral("left_ptr")});
++        if (!setCursor.waitForFinished(5000)) {
++            qWarning() << "Could not setup default cursor" << setCursor.error();
++            setCursor.kill();
++            setCursor.waitForFinished(-1);
 +        }
-+        setCursor->deleteLater();
 +    }
 +
 +    // Unlike libXcursor, xcb-util-cursor no longer looks at XCURSOR_*. Set the resources.
@@ -10956,9 +11078,10 @@ index 0000000..65dbe1e
 +            xrdbProcess.write(QStringLiteral("Xcursor.size: %1\n").arg(xcursorSize).toUtf8());
 +
 +        xrdbProcess.closeWriteChannel();
-+        if (!xrdbProcess.waitForFinished(1000)) {
++        if (!xrdbProcess.waitForFinished(5000)) {
 +            qDebug() << "Could not set Xcursor resources" << xrdbProcess.error();
 +            xrdbProcess.kill();
++            xrdbProcess.waitForFinished(-1);
 +        }
 +    }
 +
@@ -10967,9 +11090,10 @@ index 0000000..65dbe1e
 +    qInfo("Running display setup script: %s", qPrintable(cmd));
 +    QProcess *displayScript = nullptr;
 +    if (startProcess(cmd, env, &displayScript)) {
++        // delete displayScript on finish
++        connect(displayScript, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), displayScript, &QProcess::deleteLater);
 +        if (!displayScript->waitForFinished(30000))
 +            displayScript->kill();
-+        displayScript->deleteLater();
 +    }
 +}
 +
@@ -10979,9 +11103,10 @@ index 0000000..65dbe1e
 +    qInfo("Running display stop script: %s", qPrintable(cmd));
 +    QProcess *displayStopScript = nullptr;
 +    if (startProcess(cmd, sessionEnvironment(), &displayStopScript)) {
++        // delete displayStopScript on finish
++        connect(displayStopScript, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), displayStopScript, &QProcess::deleteLater);
 +        if (!displayStopScript->waitForFinished(5000))
 +            displayStopScript->kill();
-+        displayStopScript->deleteLater();
 +    }
 +}
 +
